@@ -24,7 +24,7 @@ input NewAsset {
 
 type Query {
   tags: [Tag!]!
-  assets: [Asset!]!
+  assets(id:ID): [Asset!]!
 }
 
 type TagValue {

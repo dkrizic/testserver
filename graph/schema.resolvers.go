@@ -6,6 +6,7 @@ package graph
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log/slog"
 
@@ -59,9 +60,15 @@ func (r *queryResolver) Tags(ctx context.Context) ([]*model.Tag, error) {
 }
 
 // Assets is the resolver for the assets field.
-func (r *queryResolver) Assets(ctx context.Context) ([]*model.Asset, error) {
+func (r *queryResolver) Assets(ctx context.Context, id *string) ([]*model.Asset, error) {
 	slog.Info("Assets")
-	result, err := r.dB.Query("SELECT id,name FROM asset")
+	var result *sql.Rows
+	var err error
+	if id != nil {
+		result, err = r.dB.Query("SELECT id,name FROM asset WHERE id = ?", *id)
+	} else {
+		result, err = r.dB.Query("SELECT id,name FROM asset")
+	}
 	if err != nil {
 		return nil, err
 	}
