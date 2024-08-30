@@ -14,6 +14,9 @@ create table tagvalue (
     value varchar(200),
     foreign key (asset_id) references asset(id),
     foreign key (tag_id) references tag(id));
+alter table asset add fulltext(name);
+alter table tag add fulltext(name);
+alter table tagvalue add fulltext(value);
 ```
 
 ## Insert data

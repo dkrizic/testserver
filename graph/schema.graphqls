@@ -22,10 +22,24 @@ input NewAsset {
   name: String!
 }
 
+input Search {
+  name: String
+  tagName: Boolean = true
+  tagValue: Boolean = true
+  assetName: Boolean = true
+}
+
+type SearchResult {
+  tags: [Tag!]!
+  assets: [Asset!]!
+  tagValues: [TagValue!]!
+}
+
 type Query {
   tags(id:ID): [Tag!]!
   assets(id:ID): [Asset!]!
   tagValues(id:ID): [TagValue!]!
+  search(input: Search!): SearchResult!
 }
 
 type TagValue {
