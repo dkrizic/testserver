@@ -2,6 +2,7 @@ package graph
 
 import (
 	"context"
+	"fmt"
 	"github.com/dkrizic/testserver/database"
 	"github.com/dkrizic/testserver/graph/model"
 	"log/slog"
@@ -118,7 +119,7 @@ func (r *Resolver) tagById(ctx context.Context, id string) (*model.Tag, error) {
 
 func (r *queryResolver) searchAssetName(ctx context.Context, text string) ([]*model.Asset, error) {
 	slog.Info("SearchAssetName", "text", text)
-	result, err := r.dB.Query("SELECT id,name FROM asset WHERE name LIKE ?", text)
+	result, err := r.dB.Query("SELECT id,name FROM asset WHERE name LIKE ?", fmt.Sprintf("%%%s%%", text))
 	if err != nil {
 		return nil, err
 	}
@@ -137,11 +138,12 @@ func (r *queryResolver) searchAssetName(ctx context.Context, text string) ([]*mo
 		}
 		assets = append(assets, &asset)
 	}
+	slog.InfoContext(ctx, "Found assets", "assets", len(assets))
 	return assets, nil
 }
 func (r *queryResolver) searchTagName(ctx context.Context, text string) ([]*model.Tag, error) {
-	slog.Info("SearchTagName", "text", text)
-	result, err := r.dB.Query("SELECT id,name FROM tag WHERE name LIKE ?", text)
+	slog.InfoContext(ctx, "SearchTagName", "text", text)
+	result, err := r.dB.Query("SELECT id,name FROM tag WHERE name LIKE ?", fmt.Sprintf("%%%s%%", text))
 	if err != nil {
 		return nil, err
 	}
@@ -157,11 +159,12 @@ func (r *queryResolver) searchTagName(ctx context.Context, text string) ([]*mode
 		tag.Assets, err = r.assetsByTagId(ctx, tag.ID)
 		tags = append(tags, &tag)
 	}
+	slog.InfoContext(ctx, "Found tags", "tags", len(tags))
 	return tags, nil
 }
 func (r *queryResolver) searchTagValue(ctx context.Context, text string) ([]*model.TagValue, error) {
-	slog.Info("SearchTagValue", "text", text)
-	result, err := r.dB.Query("SELECT id,tag_id,asset_id,value FROM tagvalue WHERE value LIKE ?", text)
+	slog.InfoContext(ctx, "SearchTagValue", "text", text)
+	result, err := r.dB.Query("SELECT id,tag_id,asset_id,value FROM tagvalue WHERE value LIKE ?", fmt.Sprintf("%%%s%%", text))
 	if err != nil {
 		return nil, err
 	}
@@ -182,5 +185,6 @@ func (r *queryResolver) searchTagValue(ctx context.Context, text string) ([]*mod
 		}
 		tagValues = append(tagValues, &tagValue)
 	}
+	slog.InfoContext(ctx, "Found tag values", "tagValues", len(tagValues))
 	return tagValues, nil
 }

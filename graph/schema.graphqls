@@ -50,7 +50,6 @@ type TagValue {
 }
 
 input NewTagValue {
-  id: ID!
   tagID: ID!
   assetID: ID!
   value: String!

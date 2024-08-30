@@ -3835,20 +3835,13 @@ func (ec *executionContext) unmarshalInputNewTagValue(ctx context.Context, obj i
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"id", "tagID", "assetID", "value"}
+	fieldsInOrder := [...]string{"tagID", "assetID", "value"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
 			continue
 		}
 		switch k {
-		case "id":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-			data, err := ec.unmarshalNID2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ID = data
 		case "tagID":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("tagID"))
 			data, err := ec.unmarshalNID2string(ctx, v)
