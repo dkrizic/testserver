@@ -15,11 +15,11 @@ import (
 	"github.com/dkrizic/testserver/graph"
 )
 
-const defaultPort = "8080"
+const defaultPort = "8000"
 
 func main() {
 	slog.Info("Starting server")
-	
+
 	db, err := database.NewConnection(
 		// database.Host("localhost"),
 		// database.Port("3306"),
