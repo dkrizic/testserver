@@ -23,10 +23,10 @@ input NewAsset {
 }
 
 input Search {
-  name: String
-  tagName: Boolean = true
-  tagValue: Boolean = true
-  assetName: Boolean = true
+  text: String!
+  searchTagName: Boolean! = true
+  searchTagValue: Boolean! = true
+  searchAssetName: Boolean! = true
 }
 
 type SearchResult {

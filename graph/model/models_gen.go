@@ -33,6 +33,19 @@ type NewTagValue struct {
 type Query struct {
 }
 
+type Search struct {
+	Text            string `json:"text"`
+	SearchTagName   bool   `json:"searchTagName"`
+	SearchTagValue  bool   `json:"searchTagValue"`
+	SearchAssetName bool   `json:"searchAssetName"`
+}
+
+type SearchResult struct {
+	Tags      []*Tag      `json:"tags"`
+	Assets    []*Asset    `json:"assets"`
+	TagValues []*TagValue `json:"tagValues"`
+}
+
 type Tag struct {
 	ID     string   `json:"id"`
 	Name   string   `json:"name"`

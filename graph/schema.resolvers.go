@@ -172,6 +172,34 @@ func (r *queryResolver) TagValues(ctx context.Context, id *string) ([]*model.Tag
 	return tagValues, nil
 }
 
+// Search is the resolver for the search field.
+func (r *queryResolver) Search(ctx context.Context, input model.Search) (*model.SearchResult, error) {
+	slog.Info("Search", "query", input.Text, "searchAssetName", input.SearchAssetName, "searchTagName", input.SearchTagName, "searchTagValue", input.SearchTagValue)
+	searchResult := &model.SearchResult{}
+	if input.SearchAssetName {
+		assets, err := r.searchAssetName(ctx, input.Text)
+		if err != nil {
+			return nil, err
+		}
+		searchResult.Assets = assets
+	}
+	if input.SearchTagName {
+		tags, err := r.searchTagName(ctx, input.Text)
+		if err != nil {
+			return nil, err
+		}
+		searchResult.Tags = tags
+	}
+	if input.SearchTagValue {
+		tagValues, err := r.searchTagValue(ctx, input.Text)
+		if err != nil {
+			return nil, err
+		}
+		searchResult.TagValues = tagValues
+	}
+	return searchResult, nil
+}
+
 // Mutation returns MutationResolver implementation.
 func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
 

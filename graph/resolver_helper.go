@@ -115,3 +115,72 @@ func (r *Resolver) tagById(ctx context.Context, id string) (*model.Tag, error) {
 	}
 	return &tag, nil
 }
+
+func (r *queryResolver) searchAssetName(ctx context.Context, text string) ([]*model.Asset, error) {
+	slog.Info("SearchAssetName", "text", text)
+	result, err := r.dB.Query("SELECT id,name FROM asset WHERE name LIKE ?", text)
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	assets := []*model.Asset{}
+	for result.Next() {
+		var asset model.Asset
+		err := result.Scan(&asset.ID, &asset.Name)
+		if err != nil {
+			return nil, err
+		}
+		asset.TagValues, err = r.tagValuesByAssetId(ctx, asset.ID)
+		if err != nil {
+			return nil, err
+		}
+		assets = append(assets, &asset)
+	}
+	return assets, nil
+}
+func (r *queryResolver) searchTagName(ctx context.Context, text string) ([]*model.Tag, error) {
+	slog.Info("SearchTagName", "text", text)
+	result, err := r.dB.Query("SELECT id,name FROM tag WHERE name LIKE ?", text)
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	tags := []*model.Tag{}
+	for result.Next() {
+		var tag model.Tag
+		err := result.Scan(&tag.ID, &tag.Name)
+		if err != nil {
+			return nil, err
+		}
+		tag.Assets, err = r.assetsByTagId(ctx, tag.ID)
+		tags = append(tags, &tag)
+	}
+	return tags, nil
+}
+func (r *queryResolver) searchTagValue(ctx context.Context, text string) ([]*model.TagValue, error) {
+	slog.Info("SearchTagValue", "text", text)
+	result, err := r.dB.Query("SELECT id,tag_id,asset_id,value FROM tagvalue WHERE value LIKE ?", text)
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	tagValues := []*model.TagValue{}
+	for result.Next() {
+		tagValueTemp := &database.TagValue{}
+		err := result.Scan(&tagValueTemp.ID, &tagValueTemp.TagID, &tagValueTemp.AssetID, &tagValueTemp.Value)
+		var tagValue model.TagValue
+		tagValue.ID = tagValueTemp.ID
+		tagValue.Tag, err = r.tagById(ctx, tagValueTemp.TagID)
+		tagValue.Asset, err = r.assetById(ctx, tagValueTemp.AssetID)
+		tagValue.Value = tagValueTemp.Value
+
+		if err != nil {
+			return nil, err
+		}
+		tagValues = append(tagValues, &tagValue)
+	}
+	return tagValues, nil
+}
