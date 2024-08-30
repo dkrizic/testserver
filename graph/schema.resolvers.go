@@ -39,7 +39,7 @@ func (r *mutationResolver) DeleteTagValue(ctx context.Context, input model.Delet
 }
 
 // Tags is the resolver for the tags field.
-func (r *queryResolver) Tags(ctx context.Context) ([]*model.Tag, error) {
+func (r *queryResolver) Tags(ctx context.Context, id *string) ([]*model.Tag, error) {
 	slog.Info("Tags")
 	result, err := r.dB.Query("SELECT id,name FROM tag")
 	if err != nil {
@@ -84,6 +84,11 @@ func (r *queryResolver) Assets(ctx context.Context, id *string) ([]*model.Asset,
 		assets = append(assets, &asset)
 	}
 	return assets, nil
+}
+
+// TagValues is the resolver for the tagValues field.
+func (r *queryResolver) TagValues(ctx context.Context, id *string) ([]*model.TagValue, error) {
+	panic(fmt.Errorf("not implemented: TagValues - tagValues"))
 }
 
 // Mutation returns MutationResolver implementation.
