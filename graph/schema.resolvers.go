@@ -8,35 +8,76 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/dkrizic/testserver/database"
 	"log/slog"
 
+	"github.com/dkrizic/testserver/database"
 	"github.com/dkrizic/testserver/graph/model"
 )
 
 // CreateTag is the resolver for the createTag field.
 func (r *mutationResolver) CreateTag(ctx context.Context, input model.NewTag) (*model.Tag, error) {
-	panic(fmt.Errorf("not implemented: CreateTag - createTag"))
+	slog.Info("Create tag", "name", input.Name)
+	result, err := r.dB.Exec("INSERT INTO tag (name) VALUES (?)", input.Name)
+	if err != nil {
+		return nil, err
+	}
+	id, err := result.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
+	return &model.Tag{ID: fmt.Sprintf("%d", id), Name: input.Name}, nil
 }
 
 // CreateAsset is the resolver for the createAsset field.
 func (r *mutationResolver) CreateAsset(ctx context.Context, input model.NewAsset) (*model.Asset, error) {
-	panic(fmt.Errorf("not implemented: CreateAsset - createAsset"))
+	slog.Info("Create asset", "name", input.Name)
+	result, err := r.dB.Exec("INSERT INTO asset (name) VALUES (?)", input.Name)
+	if err != nil {
+		return nil, err
+	}
+	id, err := result.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
+	return &model.Asset{ID: fmt.Sprintf("%d", id), Name: input.Name}, nil
 }
 
 // CreateTagValue is the resolver for the createTagValue field.
 func (r *mutationResolver) CreateTagValue(ctx context.Context, input model.NewTagValue) (*model.TagValue, error) {
-	panic(fmt.Errorf("not implemented: CreateTagValue - createTagValue"))
+	slog.Info("Create tag value", "tag_id", input.TagID, "asset_id", input.AssetID, "value", input.Value)
+	result, err := r.dB.Exec("INSERT INTO tagvalue (tag_id,asset_id,value) VALUES (?,?,?)", input.TagID, input.AssetID, input.Value)
+	if err != nil {
+		return nil, err
+	}
+	id, err := result.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
+	return &model.TagValue{ID: fmt.Sprintf("%d", id), Tag: &model.Tag{ID: input.TagID}, Asset: &model.Asset{ID: input.AssetID}, Value: input.Value}, nil
 }
 
 // UpdateTagValue is the resolver for the updateTagValue field.
 func (r *mutationResolver) UpdateTagValue(ctx context.Context, input model.UpdateTagValue) (*model.TagValue, error) {
-	panic(fmt.Errorf("not implemented: UpdateTagValue - updateTagValue"))
+	slog.Info("Update tag value", "id", input.ID, "value", input.Value)
+	_, err := r.dB.Exec("UPDATE tagvalue SET value = ? WHERE id = ?", input.Value, input.ID)
+	if err != nil {
+		return nil, err
+	}
+	return &model.TagValue{ID: input.ID, Value: input.Value}, nil
 }
 
 // DeleteTagValue is the resolver for the deleteTagValue field.
 func (r *mutationResolver) DeleteTagValue(ctx context.Context, input model.DeleteTagValue) (*model.TagValue, error) {
-	panic(fmt.Errorf("not implemented: DeleteTagValue - deleteTagValue"))
+	slog.Info("Delete tag value", "id", input.ID)
+	result, err := r.dB.Exec("DELETE FROM tagvalue WHERE id = ?", input.ID)
+	if err != nil {
+		return nil, err
+	}
+	id, err := result.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
+	return &model.TagValue{ID: fmt.Sprintf("%d", id)}, nil
 }
 
 // Tags is the resolver for the tags field.
@@ -129,119 +170,6 @@ func (r *queryResolver) TagValues(ctx context.Context, id *string) ([]*model.Tag
 		tagValues = append(tagValues, &tagValue)
 	}
 	return tagValues, nil
-}
-
-func (r *Resolver) assetById(ctx context.Context, id string) (*model.Asset, error) {
-	slog.Info("AssetById")
-	result, err := r.dB.Query("SELECT id,name FROM asset WHERE id = ?", id)
-	if err != nil {
-		return nil, err
-	}
-	defer result.Close()
-
-	var asset model.Asset
-	for result.Next() {
-		err := result.Scan(&asset.ID, &asset.Name)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return &asset, nil
-}
-
-func (r *Resolver) assetsByTagId(ctx context.Context, id string) ([]*model.Asset, error) {
-	slog.Info("AssetsByTagId")
-	result, err := r.dB.Query("SELECT asset_id FROM tagvalue WHERE tag_id = ?", id)
-	if err != nil {
-		return nil, err
-	}
-	defer result.Close()
-
-	assets := []*model.Asset{}
-	for result.Next() {
-		var asset model.Asset
-		err := result.Scan(&asset.ID)
-		if err != nil {
-			return nil, err
-		}
-		asset.TagValues, err = r.tagValuesByAssetId(ctx, asset.ID)
-		if err != nil {
-			return nil, err
-		}
-		assets = append(assets, &asset)
-	}
-	return assets, nil
-}
-
-func (r *Resolver) tagValuesByAssetId(ctx context.Context, id string) ([]*model.TagValue, error) {
-	slog.Info("TagValuesByAssetId")
-	result, err := r.dB.Query("SELECT id,tag_id,asset_id,value FROM tagvalue WHERE asset_id = ?", id)
-	if err != nil {
-		return nil, err
-	}
-	defer result.Close()
-
-	tagValues := []*model.TagValue{}
-	for result.Next() {
-		tagValueTemp := &database.TagValue{}
-		err := result.Scan(&tagValueTemp.ID, &tagValueTemp.TagID, &tagValueTemp.AssetID, &tagValueTemp.Value)
-		var tagValue model.TagValue
-		tagValue.ID = tagValueTemp.ID
-		tagValue.Tag, err = r.tagById(ctx, tagValueTemp.TagID)
-		tagValue.Asset, err = r.assetById(ctx, tagValueTemp.AssetID)
-		tagValue.Value = tagValueTemp.Value
-
-		if err != nil {
-			return nil, err
-		}
-		tagValues = append(tagValues, &tagValue)
-	}
-	slog.InfoContext(ctx, "TagValuesByAssetId", "tagValues", tagValues)
-	return tagValues, nil
-}
-
-func (r *Resolver) tagValuesByTagId(ctx context.Context, id string) ([]*model.TagValue, error) {
-	slog.Info("TagValuesByTagId")
-	result, err := r.dB.Query("SELECT id,tag_id,asset_id,value FROM tagvalue WHERE tag_id = ?", id)
-	if err != nil {
-		return nil, err
-	}
-	defer result.Close()
-
-	tagValues := []*model.TagValue{}
-	for result.Next() {
-		tagValueTemp := &database.TagValue{}
-		err := result.Scan(&tagValueTemp.ID, &tagValueTemp.TagID, &tagValueTemp.AssetID, &tagValueTemp.Value)
-		var tagValue model.TagValue
-		tagValue.ID = tagValueTemp.ID
-		tagValue.Tag, err = r.tagById(ctx, tagValueTemp.TagID)
-		tagValue.Asset, err = r.assetById(ctx, tagValueTemp.AssetID)
-		tagValue.Value = tagValueTemp.Value
-
-		if err != nil {
-			return nil, err
-		}
-		tagValues = append(tagValues, &tagValue)
-	}
-	return tagValues, nil
-}
-
-func (r *Resolver) tagById(ctx context.Context, id string) (*model.Tag, error) {
-	slog.Info("TagById")
-	result, err := r.dB.Query("SELECT id,name FROM tag WHERE id = ?", id)
-	if err != nil {
-		return nil, err
-	}
-	defer result.Close()
-
-	var tag model.Tag
-	for result.Next() {
-		err := result.Scan(&tag.ID, &tag.Name)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return &tag, nil
 }
 
 // Mutation returns MutationResolver implementation.
