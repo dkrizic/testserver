@@ -2,25 +2,50 @@
 
 package model
 
+type Asset struct {
+	ID        string      `json:"id"`
+	Name      string      `json:"name"`
+	TagValues []*TagValue `json:"tagValues"`
+}
+
+type DeleteTagValue struct {
+	ID string `json:"id"`
+}
+
 type Mutation struct {
 }
 
-type NewTodo struct {
-	Text   string `json:"text"`
-	UserID string `json:"userId"`
+type NewAsset struct {
+	Name string `json:"name"`
+}
+
+type NewTag struct {
+	Name string `json:"name"`
+}
+
+type NewTagValue struct {
+	ID      string `json:"id"`
+	TagID   string `json:"tagID"`
+	AssetID string `json:"assetID"`
+	Value   string `json:"value"`
 }
 
 type Query struct {
 }
 
-type Todo struct {
-	ID   string `json:"id"`
-	Text string `json:"text"`
-	Done bool   `json:"done"`
-	User *User  `json:"user"`
+type Tag struct {
+	Key  string `json:"key"`
+	Name string `json:"name"`
 }
 
-type User struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+type TagValue struct {
+	ID    string `json:"id"`
+	Tag   *Tag   `json:"tag"`
+	Asset *Asset `json:"asset"`
+	Value string `json:"value"`
+}
+
+type UpdateTagValue struct {
+	ID    string `json:"id"`
+	Value string `json:"value"`
 }

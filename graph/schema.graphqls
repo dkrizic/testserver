@@ -2,27 +2,57 @@
 #
 # https://gqlgen.com/getting-started/
 
-type Todo {
-  id: ID!
-  text: String!
-  done: Boolean!
-  user: User!
+type Tag {
+  key: String!
+  name: String!
 }
 
-type User {
+input NewTag {
+  name: String!
+}
+
+type Asset {
   id: ID!
+  name: String!
+  tagValues: [TagValue!]!
+}
+
+input NewAsset {
   name: String!
 }
 
 type Query {
-  todos: [Todo!]!
+  tags: [Tag!]!
+  assets: [Asset!]!
 }
 
-input NewTodo {
-  text: String!
-  userId: String!
+type TagValue {
+  id: ID!
+  tag : Tag!
+  asset: Asset!
+  value: String!
+}
+
+input NewTagValue {
+  id: ID!
+  tagID: ID!
+  assetID: ID!
+  value: String!
+}
+
+input UpdateTagValue {
+  id: ID!
+  value: String!
+}
+
+input DeleteTagValue {
+  id: ID!
 }
 
 type Mutation {
-  createTodo(input: NewTodo!): Todo!
+  createTag(input: NewTag!): Tag!
+  createAsset(input: NewAsset!): Asset!
+  createTagValue(input: NewTagValue!): TagValue!
+  updateTagValue(input: UpdateTagValue!): TagValue!
+  deleteTagValue(input: DeleteTagValue!): TagValue!
 }
