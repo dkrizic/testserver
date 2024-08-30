@@ -67,8 +67,9 @@ type ComplexityRoot struct {
 	}
 
 	Tag struct {
-		Key  func(childComplexity int) int
-		Name func(childComplexity int) int
+		Assets func(childComplexity int) int
+		ID     func(childComplexity int) int
+		Name   func(childComplexity int) int
 	}
 
 	TagValue struct {
@@ -205,12 +206,19 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.Tags(childComplexity), true
 
-	case "Tag.key":
-		if e.complexity.Tag.Key == nil {
+	case "Tag.assets":
+		if e.complexity.Tag.Assets == nil {
 			break
 		}
 
-		return e.complexity.Tag.Key(childComplexity), true
+		return e.complexity.Tag.Assets(childComplexity), true
+
+	case "Tag.id":
+		if e.complexity.Tag.ID == nil {
+			break
+		}
+
+		return e.complexity.Tag.ID(childComplexity), true
 
 	case "Tag.name":
 		if e.complexity.Tag.Name == nil {
@@ -685,10 +693,12 @@ func (ec *executionContext) fieldContext_Mutation_createTag(ctx context.Context,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "key":
-				return ec.fieldContext_Tag_key(ctx, field)
+			case "id":
+				return ec.fieldContext_Tag_id(ctx, field)
 			case "name":
 				return ec.fieldContext_Tag_name(ctx, field)
+			case "assets":
+				return ec.fieldContext_Tag_assets(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Tag", field.Name)
 		},
@@ -1004,10 +1014,12 @@ func (ec *executionContext) fieldContext_Query_tags(_ context.Context, field gra
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "key":
-				return ec.fieldContext_Tag_key(ctx, field)
+			case "id":
+				return ec.fieldContext_Tag_id(ctx, field)
 			case "name":
 				return ec.fieldContext_Tag_name(ctx, field)
+			case "assets":
+				return ec.fieldContext_Tag_assets(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Tag", field.Name)
 		},
@@ -1196,8 +1208,8 @@ func (ec *executionContext) fieldContext_Query___schema(_ context.Context, field
 	return fc, nil
 }
 
-func (ec *executionContext) _Tag_key(ctx context.Context, field graphql.CollectedField, obj *model.Tag) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Tag_key(ctx, field)
+func (ec *executionContext) _Tag_id(ctx context.Context, field graphql.CollectedField, obj *model.Tag) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Tag_id(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1210,7 +1222,7 @@ func (ec *executionContext) _Tag_key(ctx context.Context, field graphql.Collecte
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Key, nil
+		return obj.ID, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1227,7 +1239,7 @@ func (ec *executionContext) _Tag_key(ctx context.Context, field graphql.Collecte
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Tag_key(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Tag_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Tag",
 		Field:      field,
@@ -1279,6 +1291,58 @@ func (ec *executionContext) fieldContext_Tag_name(_ context.Context, field graph
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Tag_assets(ctx context.Context, field graphql.CollectedField, obj *model.Tag) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Tag_assets(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Assets, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Asset)
+	fc.Result = res
+	return ec.marshalNAsset2ᚕᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐAssetᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Tag_assets(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Tag",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Asset_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Asset_name(ctx, field)
+			case "tagValues":
+				return ec.fieldContext_Asset_tagValues(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Asset", field.Name)
 		},
 	}
 	return fc, nil
@@ -1367,10 +1431,12 @@ func (ec *executionContext) fieldContext_TagValue_tag(_ context.Context, field g
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "key":
-				return ec.fieldContext_Tag_key(ctx, field)
+			case "id":
+				return ec.fieldContext_Tag_id(ctx, field)
 			case "name":
 				return ec.fieldContext_Tag_name(ctx, field)
+			case "assets":
+				return ec.fieldContext_Tag_assets(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Tag", field.Name)
 		},
@@ -3649,13 +3715,18 @@ func (ec *executionContext) _Tag(ctx context.Context, sel ast.SelectionSet, obj 
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Tag")
-		case "key":
-			out.Values[i] = ec._Tag_key(ctx, field, obj)
+		case "id":
+			out.Values[i] = ec._Tag_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
 		case "name":
 			out.Values[i] = ec._Tag_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "assets":
+			out.Values[i] = ec._Tag_assets(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

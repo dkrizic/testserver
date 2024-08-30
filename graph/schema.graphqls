@@ -3,8 +3,9 @@
 # https://gqlgen.com/getting-started/
 
 type Tag {
-  key: String!
+  id: String!
   name: String!
+  assets: [Asset!]!
 }
 
 input NewTag {

@@ -34,8 +34,9 @@ type Query struct {
 }
 
 type Tag struct {
-	Key  string `json:"key"`
-	Name string `json:"name"`
+	ID     string   `json:"id"`
+	Name   string   `json:"name"`
+	Assets []*Asset `json:"assets"`
 }
 
 type TagValue struct {
