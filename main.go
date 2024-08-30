@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
@@ -16,6 +18,8 @@ import (
 const defaultPort = "8080"
 
 func main() {
+	slog.Info("Starting server")
+	
 	db, err := database.NewConnection(
 		// database.Host("localhost"),
 		// database.Port("3306"),
@@ -45,5 +49,18 @@ func main() {
 	http.HandleFunc("/health", health.HealthHandler)
 
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+
+	// start server and wait for interrupt signal
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM, syscall.SIGABRT)
+
+	go func() {
+		if err := http.ListenAndServe(":"+port, nil); err != nil {
+			slog.Error("Failed to start server", "error", err)
+			return
+		}
+	}()
+
+	<-c
+	slog.Info("Shutting down server")
 }
