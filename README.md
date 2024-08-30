@@ -15,3 +15,11 @@ create table tagvalue (
     foreign key (asset_id) references asset(id),
     foreign key (tag_id) references tag(id));
 ```
+
+## Insert data
+
+```
+insert into tag (name) values ('filename');
+insert into tag (name) values ('market');
+insert into asset (name) values ('Galaxy S24');
+insert into asset (name) values ('Galaxy S23');
