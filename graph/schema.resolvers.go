@@ -7,6 +7,7 @@ package graph
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/dkrizic/testserver/graph/model"
 )
@@ -38,12 +39,44 @@ func (r *mutationResolver) DeleteTagValue(ctx context.Context, input model.Delet
 
 // Tags is the resolver for the tags field.
 func (r *queryResolver) Tags(ctx context.Context) ([]*model.Tag, error) {
-	panic(fmt.Errorf("not implemented: Tags - tags"))
+	slog.Info("Tags")
+	result, err := r.dB.Query("SELECT id,name FROM tag")
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	tags := []*model.Tag{}
+	for result.Next() {
+		var tag model.Tag
+		err := result.Scan(&tag.ID, &tag.Name)
+		if err != nil {
+			return nil, err
+		}
+		tags = append(tags, &tag)
+	}
+	return tags, nil
 }
 
 // Assets is the resolver for the assets field.
 func (r *queryResolver) Assets(ctx context.Context) ([]*model.Asset, error) {
-	panic(fmt.Errorf("not implemented: Assets - assets"))
+	slog.Info("Assets")
+	result, err := r.dB.Query("SELECT id,name FROM asset")
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	assets := []*model.Asset{}
+	for result.Next() {
+		var asset model.Asset
+		err := result.Scan(&asset.ID, &asset.Name)
+		if err != nil {
+			return nil, err
+		}
+		assets = append(assets, &asset)
+	}
+	return assets, nil
 }
 
 // Mutation returns MutationResolver implementation.
