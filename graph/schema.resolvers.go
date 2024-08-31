@@ -132,16 +132,33 @@ func (r *queryResolver) Tags(ctx context.Context, id *string) ([]*model.Tag, err
 
 // Assets is the resolver for the assets field.
 func (r *queryResolver) Assets(ctx context.Context, id *string) ([]*model.Asset, error) {
-	slog.Info("Assets")
+	span := trace.SpanFromContext(ctx)
+	if id != nil {
+		span.SetAttributes(attribute.String("id", *id))
+	}
+	slog.Info("Assets", "id", id)
 	var result *sql.Rows
 	var err error
 	if id != nil {
-		result, err = r.dB.Query("SELECT id,name FROM asset WHERE id = ?", *id)
+		query := "SELECT id,name FROM asset WHERE id = ?"
+		span.SetAttributes(
+			attribute.String("db.query.text", query),
+			attribute.String("db.query.parameter.id", *id))
+		result, err = r.dB.Query(query, *id)
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			return nil, err
+		}
 	} else {
-		result, err = r.dB.Query("SELECT id,name FROM asset")
-	}
-	if err != nil {
-		return nil, err
+		query := "SELECT id,name FROM asset"
+		span.SetAttributes(attribute.String("db.query.text", query))
+		result, err = r.dB.Query(query)
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			return nil, err
+		}
 	}
 	defer result.Close()
 
@@ -150,29 +167,52 @@ func (r *queryResolver) Assets(ctx context.Context, id *string) ([]*model.Asset,
 		var asset model.Asset
 		err := result.Scan(&asset.ID, &asset.Name)
 		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
 			return nil, err
 		}
 		asset.TagValues, err = r.tagValuesByAssetId(ctx, asset.ID)
 		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
 			return nil, err
 		}
 		assets = append(assets, &asset)
 	}
+	span.SetAttributes(attribute.Int("assets.count", len(assets)))
+	span.SetStatus(codes.Ok, "Assets completed")
 	return assets, nil
 }
 
 // TagValues is the resolver for the tagValues field.
 func (r *queryResolver) TagValues(ctx context.Context, id *string) ([]*model.TagValue, error) {
-	slog.Info("TagValues")
+	span := trace.SpanFromContext(ctx)
+	if id != nil {
+		span.SetAttributes(attribute.String("id", *id))
+	}
+	slog.Info("TagValues", "id", id)
 	var result *sql.Rows
 	var err error
 	if id != nil {
-		result, err = r.dB.Query("SELECT id,tag_id,asset_id,value FROM tagvalue WHERE id = ?", *id)
+		query := "SELECT id,tag_id,asset_id,value FROM tagvalue WHERE id = ?"
+		span.SetAttributes(
+			attribute.String("db.query.text", query),
+			attribute.String("db.query.parameter.id", *id))
+		result, err = r.dB.Query(query, *id)
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			return nil, err
+		}
 	} else {
-		result, err = r.dB.Query("SELECT id,tag_id,asset_id,value FROM tagvalue")
-	}
-	if err != nil {
-		return nil, err
+		query := "SELECT id,tag_id,asset_id,value FROM tagvalue"
+		span.SetAttributes(attribute.String("db.query.text", query))
+		result, err = r.dB.Query(query)
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			return nil, err
+		}
 	}
 	defer result.Close()
 
@@ -191,6 +231,9 @@ func (r *queryResolver) TagValues(ctx context.Context, id *string) ([]*model.Tag
 		}
 		tagValues = append(tagValues, &tagValue)
 	}
+
+	span.SetAttributes(attribute.Int("tagValues.count", len(tagValues)))
+	span.SetStatus(codes.Ok, "TagValues completed")
 	return tagValues, nil
 }
 
