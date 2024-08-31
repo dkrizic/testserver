@@ -15,14 +15,6 @@ type DeleteTagValue struct {
 type Mutation struct {
 }
 
-type NewAsset struct {
-	Name string `json:"name"`
-}
-
-type NewTag struct {
-	Name string `json:"name"`
-}
-
 type NewTagValue struct {
 	TagID   string `json:"tagID"`
 	AssetID string `json:"assetID"`

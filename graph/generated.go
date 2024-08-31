@@ -54,8 +54,8 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		CreateAsset    func(childComplexity int, input model.NewAsset) int
-		CreateTag      func(childComplexity int, input model.NewTag) int
+		CreateAsset    func(childComplexity int, assetName string) int
+		CreateTag      func(childComplexity int, tagName string) int
 		CreateTagValue func(childComplexity int, input model.NewTagValue) int
 		DeleteTagValue func(childComplexity int, input model.DeleteTagValue) int
 		UpdateTagValue func(childComplexity int, input model.UpdateTagValue) int
@@ -89,8 +89,8 @@ type ComplexityRoot struct {
 }
 
 type MutationResolver interface {
-	CreateTag(ctx context.Context, input model.NewTag) (*model.Tag, error)
-	CreateAsset(ctx context.Context, input model.NewAsset) (*model.Asset, error)
+	CreateTag(ctx context.Context, tagName string) (*model.Tag, error)
+	CreateAsset(ctx context.Context, assetName string) (*model.Asset, error)
 	CreateTagValue(ctx context.Context, input model.NewTagValue) (*model.TagValue, error)
 	UpdateTagValue(ctx context.Context, input model.UpdateTagValue) (*model.TagValue, error)
 	DeleteTagValue(ctx context.Context, input model.DeleteTagValue) (*model.TagValue, error)
@@ -152,7 +152,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreateAsset(childComplexity, args["input"].(model.NewAsset)), true
+		return e.complexity.Mutation.CreateAsset(childComplexity, args["assetName"].(string)), true
 
 	case "Mutation.createTag":
 		if e.complexity.Mutation.CreateTag == nil {
@@ -164,7 +164,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreateTag(childComplexity, args["input"].(model.NewTag)), true
+		return e.complexity.Mutation.CreateTag(childComplexity, args["tagName"].(string)), true
 
 	case "Mutation.createTagValue":
 		if e.complexity.Mutation.CreateTagValue == nil {
@@ -329,8 +329,6 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	ec := executionContext{rc, e, 0, 0, make(chan graphql.DeferredResult)}
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
 		ec.unmarshalInputDeleteTagValue,
-		ec.unmarshalInputNewAsset,
-		ec.unmarshalInputNewTag,
 		ec.unmarshalInputNewTagValue,
 		ec.unmarshalInputSearch,
 		ec.unmarshalInputUpdateTagValue,
@@ -453,15 +451,15 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 func (ec *executionContext) field_Mutation_createAsset_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 model.NewAsset
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNNewAsset2githubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐNewAsset(ctx, tmp)
+	var arg0 string
+	if tmp, ok := rawArgs["assetName"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("assetName"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["input"] = arg0
+	args["assetName"] = arg0
 	return args, nil
 }
 
@@ -483,15 +481,15 @@ func (ec *executionContext) field_Mutation_createTagValue_args(ctx context.Conte
 func (ec *executionContext) field_Mutation_createTag_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 model.NewTag
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNNewTag2githubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐNewTag(ctx, tmp)
+	var arg0 string
+	if tmp, ok := rawArgs["tagName"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("tagName"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["input"] = arg0
+	args["tagName"] = arg0
 	return args, nil
 }
 
@@ -794,7 +792,7 @@ func (ec *executionContext) _Mutation_createTag(ctx context.Context, field graph
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateTag(rctx, fc.Args["input"].(model.NewTag))
+		return ec.resolvers.Mutation().CreateTag(rctx, fc.Args["tagName"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -857,7 +855,7 @@ func (ec *executionContext) _Mutation_createAsset(ctx context.Context, field gra
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateAsset(rctx, fc.Args["input"].(model.NewAsset))
+		return ec.resolvers.Mutation().CreateAsset(rctx, fc.Args["assetName"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3774,60 +3772,6 @@ func (ec *executionContext) unmarshalInputDeleteTagValue(ctx context.Context, ob
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputNewAsset(ctx context.Context, obj interface{}) (model.NewAsset, error) {
-	var it model.NewAsset
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"name"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "name":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
-			data, err := ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Name = data
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputNewTag(ctx context.Context, obj interface{}) (model.NewTag, error) {
-	var it model.NewTag
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"name"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "name":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
-			data, err := ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Name = data
-		}
-	}
-
-	return it, nil
-}
-
 func (ec *executionContext) unmarshalInputNewTagValue(ctx context.Context, obj interface{}) (model.NewTagValue, error) {
 	var it model.NewTagValue
 	asMap := map[string]interface{}{}
@@ -4802,16 +4746,6 @@ func (ec *executionContext) marshalNID2string(ctx context.Context, sel ast.Selec
 		}
 	}
 	return res
-}
-
-func (ec *executionContext) unmarshalNNewAsset2githubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐNewAsset(ctx context.Context, v interface{}) (model.NewAsset, error) {
-	res, err := ec.unmarshalInputNewAsset(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalNNewTag2githubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐNewTag(ctx context.Context, v interface{}) (model.NewTag, error) {
-	res, err := ec.unmarshalInputNewTag(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalNNewTagValue2githubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐNewTagValue(ctx context.Context, v interface{}) (model.NewTagValue, error) {

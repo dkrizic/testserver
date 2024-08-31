@@ -8,19 +8,19 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
 	"log/slog"
 
 	"github.com/dkrizic/testserver/database"
 	"github.com/dkrizic/testserver/graph/model"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // CreateTag is the resolver for the createTag field.
-func (r *mutationResolver) CreateTag(ctx context.Context, input model.NewTag) (*model.Tag, error) {
-	slog.Info("Create tag", "name", input.Name)
-	result, err := r.dB.Exec("INSERT INTO tag (name) VALUES (?)", input.Name)
+func (r *mutationResolver) CreateTag(ctx context.Context, tagName string) (*model.Tag, error) {
+	slog.Info("Create tag", "name", tagName)
+	result, err := r.dB.Exec("INSERT INTO tag (name) VALUES (?)", tagName)
 	if err != nil {
 		return nil, err
 	}
@@ -28,13 +28,13 @@ func (r *mutationResolver) CreateTag(ctx context.Context, input model.NewTag) (*
 	if err != nil {
 		return nil, err
 	}
-	return &model.Tag{ID: fmt.Sprintf("%d", id), Name: input.Name}, nil
+	return &model.Tag{ID: fmt.Sprintf("%d", id), Name: tagName}, nil
 }
 
 // CreateAsset is the resolver for the createAsset field.
-func (r *mutationResolver) CreateAsset(ctx context.Context, input model.NewAsset) (*model.Asset, error) {
-	slog.Info("Create asset", "name", input.Name)
-	result, err := r.dB.Exec("INSERT INTO asset (name) VALUES (?)", input.Name)
+func (r *mutationResolver) CreateAsset(ctx context.Context, assetName string) (*model.Asset, error) {
+	slog.Info("Create asset", "name", assetName)
+	result, err := r.dB.Exec("INSERT INTO asset (name) VALUES (?)", assetName)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func (r *mutationResolver) CreateAsset(ctx context.Context, input model.NewAsset
 	if err != nil {
 		return nil, err
 	}
-	return &model.Asset{ID: fmt.Sprintf("%d", id), Name: input.Name}, nil
+	return &model.Asset{ID: fmt.Sprintf("%d", id), Name: assetName}, nil
 }
 
 // CreateTagValue is the resolver for the createTagValue field.
