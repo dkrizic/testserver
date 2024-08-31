@@ -8,6 +8,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"log/slog"
 
 	"github.com/dkrizic/testserver/database"
@@ -174,10 +176,17 @@ func (r *queryResolver) TagValues(ctx context.Context, id *string) ([]*model.Tag
 
 // Search is the resolver for the search field.
 func (r *queryResolver) Search(ctx context.Context, input model.Search) (*model.SearchResult, error) {
+	span := trace.SpanFromContext(ctx)
+	// ctx, span := telemetry.Tracer().Start(ctx, "Search")
+	// defer span.End()
+	span.SetAttributes(attribute.String("query", input.Text))
+
 	slog.Info("Search", "query", input.Text, "searchAssetName", input.SearchAssetName, "searchTagName", input.SearchTagName, "searchTagValue", input.SearchTagValue)
 	searchResult := &model.SearchResult{}
 	if input.SearchAssetName {
 		assets, err := r.searchAssetName(ctx, input.Text)
+		// span.RecordError(err)
+		// span.SetStatus(codes.Error, err.Error())
 		if err != nil {
 			return nil, err
 		}
@@ -193,10 +202,14 @@ func (r *queryResolver) Search(ctx context.Context, input model.Search) (*model.
 	if input.SearchTagValue {
 		tagValues, err := r.searchTagValue(ctx, input.Text)
 		if err != nil {
+			// span.RecordError(err)
+			// span.SetStatus(codes.Error, err.Error())
 			return nil, err
 		}
 		searchResult.TagValues = tagValues
 	}
+
+	// span.SetStatus(codes.Ok, "Search completed")
 	return searchResult, nil
 }
 

@@ -5,8 +5,10 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/dkrizic/testserver/database"
 	"github.com/dkrizic/testserver/graph"
-	"github.com/dkrizic/testserver/handler/health"
-	"log"
+	"github.com/dkrizic/testserver/service/handler/health"
+	log2 "github.com/dkrizic/testserver/service/handler/log"
+	"github.com/dkrizic/testserver/service/version"
+	"github.com/ravilushqa/otelgqlgen"
 	"log/slog"
 	"net/http"
 	"os"
@@ -14,7 +16,13 @@ import (
 	"syscall"
 )
 
-const defaultPort = "8000"
+const (
+	defaultPort = "8000"
+	defaultPath = "/"
+	versionPath = "/version"
+	healthPath  = "/health"
+	queryPath   = "/query"
+)
 
 type Service struct {
 	Port             string
@@ -94,26 +102,36 @@ func (s *Service) Run() error {
 		port = defaultPort
 	}
 
+	mux := http.NewServeMux()
+
+	slog.Info("Binding health handler", "path", healthPath)
+	mux.HandleFunc(healthPath, health.HealthHandler)
+
+	slog.Info("Binding version handler", "path", versionPath)
+	mux.HandleFunc(versionPath, version.VersionHandler)
+
 	resolver := graph.NewResolver(graph.DB(db))
-	srv := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{Resolvers: resolver}))
+	queryHandler := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{Resolvers: resolver}))
+	slog.Info("Binding query handler", "path", queryPath)
+	queryHandler.Use(otelgqlgen.Middleware())
+	mux.Handle(queryPath, queryHandler)
 
-	slog.Info("Binding GraphQL playground to /")
-	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
+	slog.Info("Binding playground", "path", defaultPath)
+	mux.Handle("/", playground.Handler("GraphQL playground", "/query"))
 
-	slog.Info("Binding GraphQL query handler to /query")
-	http.Handle("/query", srv)
+	logHandler := log2.LogHandler(mux)
 
-	slog.Info("Binding health handler to /health")
-	http.HandleFunc("/health", health.HealthHandler)
-
-	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
+	server := &http.Server{
+		Addr:    ":" + port,
+		Handler: logHandler,
+	}
 
 	// start server and wait for interrupt signal
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM, syscall.SIGABRT)
 
 	go func() {
-		if err := http.ListenAndServe(":"+port, nil); err != nil {
+		if err := server.ListenAndServe(); err != nil {
 			slog.Error("Failed to start server", "error", err)
 			return
 		}
