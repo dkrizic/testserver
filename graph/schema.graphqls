@@ -28,10 +28,10 @@ type SearchResult {
 }
 
 type Query {
-  tags(id:ID): [Tag!]!
-  assets(id:ID): [Asset!]!
-  tagValues(id:ID): [TagValue!]!
-  search(input: Search!): SearchResult!
+  tags(id:ID, skip: Int = 0, limit: Int = 10): [Tag!]!
+  assets(id:ID, skip: Int = 0, limit: Int = 10): [Asset!]!
+  tagValues(id:ID, skip: Int = 0, limit: Int = 10): [TagValue!]!
+  search(input: Search!, skip: Int = 0, limit: Int = 10): SearchResult!
 }
 
 type TagValue {

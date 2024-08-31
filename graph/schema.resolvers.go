@@ -84,17 +84,19 @@ func (r *mutationResolver) DeleteTagValue(ctx context.Context, input model.Delet
 }
 
 // Tags is the resolver for the tags field.
-func (r *queryResolver) Tags(ctx context.Context, id *string) ([]*model.Tag, error) {
+func (r *queryResolver) Tags(ctx context.Context, id *string, skip *int, limit *int) ([]*model.Tag, error) {
 	span := trace.SpanFromContext(ctx)
 	if id != nil {
 		span.SetAttributes(attribute.String("id", *id))
 	}
-	slog.Info("Tags", "id", id)
+	slog.Info("Tags", "id", id, "skip", skip, "limit", limit)
 	var result *sql.Rows
 	var err error
 	span.SetAttributes(
 		attribute.String("db.system", "mysql"),
-		attribute.String("db.operation.name", "select"))
+		attribute.String("db.operation.name", "select"),
+		attribute.Int("skip", *skip),
+		attribute.Int("limit", *limit))
 	if id != nil {
 		query := "SELECT id,name FROM tag WHERE id = ?"
 		span.SetAttributes(
@@ -102,11 +104,12 @@ func (r *queryResolver) Tags(ctx context.Context, id *string) ([]*model.Tag, err
 			attribute.String("db.query.parameter.id", *id))
 		result, err = r.dB.Query(query, *id)
 	} else {
-		query := "SELECT id,name FROM tag"
+		query := "SELECT id,name FROM tag LIMIT ?,?"
 		span.SetAttributes(attribute.String("db.query.text", query))
-		result, err = r.dB.Query(query)
+		result, err = r.dB.Query(query, *skip, *limit)
 	}
 	if err != nil {
+		slog.WarnContext(ctx, "Error querying database", "error", err)
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		return nil, err
@@ -131,12 +134,12 @@ func (r *queryResolver) Tags(ctx context.Context, id *string) ([]*model.Tag, err
 }
 
 // Assets is the resolver for the assets field.
-func (r *queryResolver) Assets(ctx context.Context, id *string) ([]*model.Asset, error) {
+func (r *queryResolver) Assets(ctx context.Context, id *string, skip *int, limit *int) ([]*model.Asset, error) {
 	span := trace.SpanFromContext(ctx)
 	if id != nil {
 		span.SetAttributes(attribute.String("id", *id))
 	}
-	slog.Info("Assets", "id", id)
+	slog.Info("Assets", "id", id, "skip", skip, "limit", limit)
 	var result *sql.Rows
 	var err error
 	if id != nil {
@@ -151,9 +154,9 @@ func (r *queryResolver) Assets(ctx context.Context, id *string) ([]*model.Asset,
 			return nil, err
 		}
 	} else {
-		query := "SELECT id,name FROM asset"
+		query := "SELECT id,name FROM asset LIMIT ?,?"
 		span.SetAttributes(attribute.String("db.query.text", query))
-		result, err = r.dB.Query(query)
+		result, err = r.dB.Query(query, skip, limit)
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
@@ -185,20 +188,20 @@ func (r *queryResolver) Assets(ctx context.Context, id *string) ([]*model.Asset,
 }
 
 // TagValues is the resolver for the tagValues field.
-func (r *queryResolver) TagValues(ctx context.Context, id *string) ([]*model.TagValue, error) {
+func (r *queryResolver) TagValues(ctx context.Context, id *string, skip *int, limit *int) ([]*model.TagValue, error) {
 	span := trace.SpanFromContext(ctx)
 	if id != nil {
 		span.SetAttributes(attribute.String("id", *id))
 	}
-	slog.Info("TagValues", "id", id)
+	slog.Info("TagValues", "id", id, "skip", skip, "limit", limit)
 	var result *sql.Rows
 	var err error
 	if id != nil {
-		query := "SELECT id,tag_id,asset_id,value FROM tagvalue WHERE id = ?"
+		query := "SELECT id,tag_id,asset_id,value FROM tagvalue WHERE id = ? LIMIT ?,?"
 		span.SetAttributes(
 			attribute.String("db.query.text", query),
 			attribute.String("db.query.parameter.id", *id))
-		result, err = r.dB.Query(query, *id)
+		result, err = r.dB.Query(query, *id, *skip, *limit)
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
@@ -238,7 +241,7 @@ func (r *queryResolver) TagValues(ctx context.Context, id *string) ([]*model.Tag
 }
 
 // Search is the resolver for the search field.
-func (r *queryResolver) Search(ctx context.Context, input model.Search) (*model.SearchResult, error) {
+func (r *queryResolver) Search(ctx context.Context, input model.Search, skip *int, limit *int) (*model.SearchResult, error) {
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(
 		attribute.String("query", input.Text),

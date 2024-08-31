@@ -62,10 +62,10 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		Assets    func(childComplexity int, id *string) int
-		Search    func(childComplexity int, input model.Search) int
-		TagValues func(childComplexity int, id *string) int
-		Tags      func(childComplexity int, id *string) int
+		Assets    func(childComplexity int, id *string, skip *int, limit *int) int
+		Search    func(childComplexity int, input model.Search, skip *int, limit *int) int
+		TagValues func(childComplexity int, id *string, skip *int, limit *int) int
+		Tags      func(childComplexity int, id *string, skip *int, limit *int) int
 	}
 
 	SearchResult struct {
@@ -96,10 +96,10 @@ type MutationResolver interface {
 	DeleteTagValue(ctx context.Context, input model.DeleteTagValue) (*model.TagValue, error)
 }
 type QueryResolver interface {
-	Tags(ctx context.Context, id *string) ([]*model.Tag, error)
-	Assets(ctx context.Context, id *string) ([]*model.Asset, error)
-	TagValues(ctx context.Context, id *string) ([]*model.TagValue, error)
-	Search(ctx context.Context, input model.Search) (*model.SearchResult, error)
+	Tags(ctx context.Context, id *string, skip *int, limit *int) ([]*model.Tag, error)
+	Assets(ctx context.Context, id *string, skip *int, limit *int) ([]*model.Asset, error)
+	TagValues(ctx context.Context, id *string, skip *int, limit *int) ([]*model.TagValue, error)
+	Search(ctx context.Context, input model.Search, skip *int, limit *int) (*model.SearchResult, error)
 }
 
 type executableSchema struct {
@@ -212,7 +212,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.Assets(childComplexity, args["id"].(*string)), true
+		return e.complexity.Query.Assets(childComplexity, args["id"].(*string), args["skip"].(*int), args["limit"].(*int)), true
 
 	case "Query.search":
 		if e.complexity.Query.Search == nil {
@@ -224,7 +224,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.Search(childComplexity, args["input"].(model.Search)), true
+		return e.complexity.Query.Search(childComplexity, args["input"].(model.Search), args["skip"].(*int), args["limit"].(*int)), true
 
 	case "Query.tagValues":
 		if e.complexity.Query.TagValues == nil {
@@ -236,7 +236,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.TagValues(childComplexity, args["id"].(*string)), true
+		return e.complexity.Query.TagValues(childComplexity, args["id"].(*string), args["skip"].(*int), args["limit"].(*int)), true
 
 	case "Query.tags":
 		if e.complexity.Query.Tags == nil {
@@ -248,7 +248,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.Tags(childComplexity, args["id"].(*string)), true
+		return e.complexity.Query.Tags(childComplexity, args["id"].(*string), args["skip"].(*int), args["limit"].(*int)), true
 
 	case "SearchResult.assets":
 		if e.complexity.SearchResult.Assets == nil {
@@ -550,6 +550,24 @@ func (ec *executionContext) field_Query_assets_args(ctx context.Context, rawArgs
 		}
 	}
 	args["id"] = arg0
+	var arg1 *int
+	if tmp, ok := rawArgs["skip"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("skip"))
+		arg1, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["skip"] = arg1
+	var arg2 *int
+	if tmp, ok := rawArgs["limit"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limit"))
+		arg2, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["limit"] = arg2
 	return args, nil
 }
 
@@ -565,6 +583,24 @@ func (ec *executionContext) field_Query_search_args(ctx context.Context, rawArgs
 		}
 	}
 	args["input"] = arg0
+	var arg1 *int
+	if tmp, ok := rawArgs["skip"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("skip"))
+		arg1, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["skip"] = arg1
+	var arg2 *int
+	if tmp, ok := rawArgs["limit"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limit"))
+		arg2, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["limit"] = arg2
 	return args, nil
 }
 
@@ -580,6 +616,24 @@ func (ec *executionContext) field_Query_tagValues_args(ctx context.Context, rawA
 		}
 	}
 	args["id"] = arg0
+	var arg1 *int
+	if tmp, ok := rawArgs["skip"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("skip"))
+		arg1, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["skip"] = arg1
+	var arg2 *int
+	if tmp, ok := rawArgs["limit"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limit"))
+		arg2, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["limit"] = arg2
 	return args, nil
 }
 
@@ -595,6 +649,24 @@ func (ec *executionContext) field_Query_tags_args(ctx context.Context, rawArgs m
 		}
 	}
 	args["id"] = arg0
+	var arg1 *int
+	if tmp, ok := rawArgs["skip"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("skip"))
+		arg1, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["skip"] = arg1
+	var arg2 *int
+	if tmp, ok := rawArgs["limit"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limit"))
+		arg2, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["limit"] = arg2
 	return args, nil
 }
 
@@ -1113,7 +1185,7 @@ func (ec *executionContext) _Query_tags(ctx context.Context, field graphql.Colle
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Tags(rctx, fc.Args["id"].(*string))
+		return ec.resolvers.Query().Tags(rctx, fc.Args["id"].(*string), fc.Args["skip"].(*int), fc.Args["limit"].(*int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1176,7 +1248,7 @@ func (ec *executionContext) _Query_assets(ctx context.Context, field graphql.Col
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Assets(rctx, fc.Args["id"].(*string))
+		return ec.resolvers.Query().Assets(rctx, fc.Args["id"].(*string), fc.Args["skip"].(*int), fc.Args["limit"].(*int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1239,7 +1311,7 @@ func (ec *executionContext) _Query_tagValues(ctx context.Context, field graphql.
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().TagValues(rctx, fc.Args["id"].(*string))
+		return ec.resolvers.Query().TagValues(rctx, fc.Args["id"].(*string), fc.Args["skip"].(*int), fc.Args["limit"].(*int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1304,7 +1376,7 @@ func (ec *executionContext) _Query_search(ctx context.Context, field graphql.Col
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Search(rctx, fc.Args["input"].(model.Search))
+		return ec.resolvers.Query().Search(rctx, fc.Args["input"].(model.Search), fc.Args["skip"].(*int), fc.Args["limit"].(*int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5200,6 +5272,22 @@ func (ec *executionContext) marshalOID2ᚖstring(ctx context.Context, sel ast.Se
 		return graphql.Null
 	}
 	res := graphql.MarshalID(*v)
+	return res
+}
+
+func (ec *executionContext) unmarshalOInt2ᚖint(ctx context.Context, v interface{}) (*int, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalInt(v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.SelectionSet, v *int) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	res := graphql.MarshalInt(*v)
 	return res
 }
 
