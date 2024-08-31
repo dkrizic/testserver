@@ -9,6 +9,7 @@ import (
 	"database/sql"
 	"fmt"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 	"log/slog"
 
@@ -84,15 +85,30 @@ func (r *mutationResolver) DeleteTagValue(ctx context.Context, input model.Delet
 
 // Tags is the resolver for the tags field.
 func (r *queryResolver) Tags(ctx context.Context, id *string) ([]*model.Tag, error) {
-	slog.Info("Tags")
+	span := trace.SpanFromContext(ctx)
+	if id != nil {
+		span.SetAttributes(attribute.String("id", *id))
+	}
+	slog.Info("Tags", "id", id)
 	var result *sql.Rows
 	var err error
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("db.operation.name", "select"))
 	if id != nil {
-		result, err = r.dB.Query("SELECT id,name FROM tag WHERE id = ?", *id)
+		query := "SELECT id,name FROM tag WHERE id = ?"
+		span.SetAttributes(
+			attribute.String("db.query.text", query),
+			attribute.String("db.query.parameter.id", *id))
+		result, err = r.dB.Query(query, *id)
 	} else {
-		result, err = r.dB.Query("SELECT id,name FROM tag")
+		query := "SELECT id,name FROM tag"
+		span.SetAttributes(attribute.String("db.query.text", query))
+		result, err = r.dB.Query(query)
 	}
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return nil, err
 	}
 	defer result.Close()
@@ -102,11 +118,15 @@ func (r *queryResolver) Tags(ctx context.Context, id *string) ([]*model.Tag, err
 		var tag model.Tag
 		err := result.Scan(&tag.ID, &tag.Name)
 		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
 			return nil, err
 		}
 		tag.Assets, err = r.assetsByTagId(ctx, tag.ID)
 		tags = append(tags, &tag)
 	}
+	span.SetAttributes(attribute.Int("tags.count", len(tags)))
+	span.SetStatus(codes.Ok, "Tags completed")
 	return tags, nil
 }
 
@@ -177,17 +197,19 @@ func (r *queryResolver) TagValues(ctx context.Context, id *string) ([]*model.Tag
 // Search is the resolver for the search field.
 func (r *queryResolver) Search(ctx context.Context, input model.Search) (*model.SearchResult, error) {
 	span := trace.SpanFromContext(ctx)
-	// ctx, span := telemetry.Tracer().Start(ctx, "Search")
-	// defer span.End()
-	span.SetAttributes(attribute.String("query", input.Text))
+	span.SetAttributes(
+		attribute.String("query", input.Text),
+		attribute.Bool("searchAssetName", input.SearchAssetName),
+		attribute.Bool("searchTagName", input.SearchTagName),
+		attribute.Bool("searchTagValue", input.SearchTagValue))
 
 	slog.Info("Search", "query", input.Text, "searchAssetName", input.SearchAssetName, "searchTagName", input.SearchTagName, "searchTagValue", input.SearchTagValue)
 	searchResult := &model.SearchResult{}
 	if input.SearchAssetName {
 		assets, err := r.searchAssetName(ctx, input.Text)
-		// span.RecordError(err)
-		// span.SetStatus(codes.Error, err.Error())
 		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
 			return nil, err
 		}
 		searchResult.Assets = assets
@@ -202,14 +224,14 @@ func (r *queryResolver) Search(ctx context.Context, input model.Search) (*model.
 	if input.SearchTagValue {
 		tagValues, err := r.searchTagValue(ctx, input.Text)
 		if err != nil {
-			// span.RecordError(err)
-			// span.SetStatus(codes.Error, err.Error())
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
 			return nil, err
 		}
 		searchResult.TagValues = tagValues
 	}
 
-	// span.SetStatus(codes.Ok, "Search completed")
+	span.SetStatus(codes.Ok, "Search completed")
 	return searchResult, nil
 }
 
