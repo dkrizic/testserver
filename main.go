@@ -1,66 +1,46 @@
 package main
 
 import (
-	"github.com/dkrizic/testserver/database"
-	"github.com/dkrizic/testserver/handler/health"
-	"log"
+	"fmt"
+	"github.com/dkrizic/testserver/config"
+	"github.com/dkrizic/testserver/meta"
+	"github.com/dkrizic/testserver/service"
 	"log/slog"
-	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
-
-	"github.com/99designs/gqlgen/graphql/handler"
-	"github.com/99designs/gqlgen/graphql/playground"
-	"github.com/dkrizic/testserver/graph"
 )
 
-const defaultPort = "8000"
-
 func main() {
-	slog.Info("Starting server")
 
-	db, err := database.NewConnection(
-		// database.Host("localhost"),
-		// database.Port("3306"),
-		database.Username("testserver"),
-		database.Password("testserver"),
-		database.Database("testserver"))
+	c, err := config.New()
 	if err != nil {
-		slog.Error("Failed to connecto to database", "error", err)
+		slog.Error("Failed to create config", "error", err)
 		return
 	}
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = defaultPort
+	slog.Info("Starting service", "service", meta.ServiceName, "version", meta.Version)
+	slog.Debug("Configuration",
+		"port", c.Service().Port(),
+		"database-host", c.Service().DatabaseHost(),
+		"database-port", c.Service().DatabasePort(),
+		"database-user", c.Service().DatabaseUser(),
+		"database-name", c.Service().DatabaseName())
+
+	s, err := service.NewService(
+		service.Port(fmt.Sprintf(":%d", c.Service().Port())),
+		service.DatabaseHost(c.Service().DatabaseHost()),
+		service.DatabasePort(fmt.Sprintf("%d", c.Service().DatabasePort())),
+		service.DatabaseUsername(c.Service().DatabaseUser()),
+		service.DatabasePassword(c.Service().DatabasePassword()),
+		service.DatabaseName(c.Service().DatabaseHost()))
+	if err != nil {
+		slog.Error("Failed to create service", "error", err)
+		return
 	}
 
-	resolver := graph.NewResolver(graph.DB(db))
-	srv := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{Resolvers: resolver}))
+	err = s.Run()
+	if err != nil {
+		slog.Error("Failed to run service", "error", err)
+		return
+	}
 
-	slog.Info("Binding GraphQL playground to /")
-	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
-
-	slog.Info("Binding GraphQL query handler to /query")
-	http.Handle("/query", srv)
-
-	slog.Info("Binding health handler to /health")
-	http.HandleFunc("/health", health.HealthHandler)
-
-	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
-
-	// start server and wait for interrupt signal
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM, syscall.SIGABRT)
-
-	go func() {
-		if err := http.ListenAndServe(":"+port, nil); err != nil {
-			slog.Error("Failed to start server", "error", err)
-			return
-		}
-	}()
-
-	<-c
-	slog.Info("Shutting down server")
+	slog.Info("Stopping service", "service", meta.ServiceName)
 }

@@ -9,7 +9,7 @@ import (
 )
 
 func (r *Resolver) assetById(ctx context.Context, id string) (*model.Asset, error) {
-	slog.Info("AssetById")
+	slog.DebugContext(ctx, "AssetById", "id", id)
 	result, err := r.dB.Query("SELECT id,name FROM asset WHERE id = ?", id)
 	if err != nil {
 		return nil, err
@@ -26,7 +26,7 @@ func (r *Resolver) assetById(ctx context.Context, id string) (*model.Asset, erro
 	return &asset, nil
 }
 func (r *Resolver) assetsByTagId(ctx context.Context, id string) ([]*model.Asset, error) {
-	slog.Info("AssetsByTagId")
+	slog.DebugContext(ctx, "AssetsByTagId", "id", id)
 	result, err := r.dB.Query("SELECT asset_id FROM tagvalue WHERE tag_id = ?", id)
 	if err != nil {
 		return nil, err
@@ -49,7 +49,7 @@ func (r *Resolver) assetsByTagId(ctx context.Context, id string) ([]*model.Asset
 	return assets, nil
 }
 func (r *Resolver) tagValuesByAssetId(ctx context.Context, id string) ([]*model.TagValue, error) {
-	slog.Info("TagValuesByAssetId")
+	slog.InfoContext(ctx, "TagValuesByAssetId", "id", id)
 	result, err := r.dB.Query("SELECT id,tag_id,asset_id,value FROM tagvalue WHERE asset_id = ?", id)
 	if err != nil {
 		return nil, err
@@ -71,11 +71,10 @@ func (r *Resolver) tagValuesByAssetId(ctx context.Context, id string) ([]*model.
 		}
 		tagValues = append(tagValues, &tagValue)
 	}
-	slog.InfoContext(ctx, "TagValuesByAssetId", "tagValues", tagValues)
 	return tagValues, nil
 }
 func (r *Resolver) tagValuesByTagId(ctx context.Context, id string) ([]*model.TagValue, error) {
-	slog.Info("TagValuesByTagId")
+	slog.DebugContext(ctx, "TagValuesByTagId", "id", id)
 	result, err := r.dB.Query("SELECT id,tag_id,asset_id,value FROM tagvalue WHERE tag_id = ?", id)
 	if err != nil {
 		return nil, err
@@ -100,7 +99,7 @@ func (r *Resolver) tagValuesByTagId(ctx context.Context, id string) ([]*model.Ta
 	return tagValues, nil
 }
 func (r *Resolver) tagById(ctx context.Context, id string) (*model.Tag, error) {
-	slog.Info("TagById")
+	slog.DebugContext(ctx, "TagById", "id", id)
 	result, err := r.dB.Query("SELECT id,name FROM tag WHERE id = ?", id)
 	if err != nil {
 		return nil, err
@@ -118,7 +117,7 @@ func (r *Resolver) tagById(ctx context.Context, id string) (*model.Tag, error) {
 }
 
 func (r *queryResolver) searchAssetName(ctx context.Context, text string) ([]*model.Asset, error) {
-	slog.Info("SearchAssetName", "text", text)
+	slog.InfoContext(ctx, "SearchAssetName", "text", text)
 	result, err := r.dB.Query("SELECT id,name FROM asset WHERE name LIKE ?", fmt.Sprintf("%%%s%%", text))
 	if err != nil {
 		return nil, err
@@ -138,11 +137,10 @@ func (r *queryResolver) searchAssetName(ctx context.Context, text string) ([]*mo
 		}
 		assets = append(assets, &asset)
 	}
-	slog.InfoContext(ctx, "Found assets", "assets", len(assets))
 	return assets, nil
 }
 func (r *queryResolver) searchTagName(ctx context.Context, text string) ([]*model.Tag, error) {
-	slog.InfoContext(ctx, "SearchTagName", "text", text)
+	slog.DebugContext(ctx, "SearchTagName", "text", text)
 	result, err := r.dB.Query("SELECT id,name FROM tag WHERE name LIKE ?", fmt.Sprintf("%%%s%%", text))
 	if err != nil {
 		return nil, err
@@ -159,11 +157,10 @@ func (r *queryResolver) searchTagName(ctx context.Context, text string) ([]*mode
 		tag.Assets, err = r.assetsByTagId(ctx, tag.ID)
 		tags = append(tags, &tag)
 	}
-	slog.InfoContext(ctx, "Found tags", "tags", len(tags))
 	return tags, nil
 }
 func (r *queryResolver) searchTagValue(ctx context.Context, text string) ([]*model.TagValue, error) {
-	slog.InfoContext(ctx, "SearchTagValue", "text", text)
+	slog.DebugContext(ctx, "SearchTagValue", "text", text)
 	result, err := r.dB.Query("SELECT id,tag_id,asset_id,value FROM tagvalue WHERE value LIKE ?", fmt.Sprintf("%%%s%%", text))
 	if err != nil {
 		return nil, err
@@ -185,6 +182,5 @@ func (r *queryResolver) searchTagValue(ctx context.Context, text string) ([]*mod
 		}
 		tagValues = append(tagValues, &tagValue)
 	}
-	slog.InfoContext(ctx, "Found tag values", "tagValues", len(tagValues))
 	return tagValues, nil
 }
