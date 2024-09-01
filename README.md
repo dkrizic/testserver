@@ -1,28 +1,12 @@
-## Create database
+# Sample application for GraphQL
 
-```
-create table asset (
-    id int not null primary key auto_increment, 
-    name varchar(200) not null);
-create table tag (
-    id int not null primary key auto_increment, 
-    name varchar(200) not null);
-create table tagvalue (
-    id int not null primary key auto_increment, 
-    asset_id int not null, 
-    tag_id int not null, 
-    value varchar(200),
-    foreign key (asset_id) references asset(id),
-    foreign key (tag_id) references tag(id));
-alter table asset add fulltext(name);
-alter table tag add fulltext(name);
-alter table tagvalue add fulltext(value);
-```
+## Features
 
-## Insert data
+* Multi stage: Uses Multi stage build for building the container
+* Database ownershop: Takes care of the database schema by itself
+* all runtime parameters are passed either via environment variables or command line arguments
+* JSON logging incuding trace_id and span_id
+* OpenTelemetry: Exploses traces in OTLP to a configurable endpoint
+* Version awareness: Exploses the own version via /version endpoint
+* Health endpoint: Exploses a health endpoint for readiness and liveness probes
 
-```
-insert into tag (name) values ('filename');
-insert into tag (name) values ('market');
-insert into asset (name) values ('Galaxy S24');
-insert into asset (name) values ('Galaxy S23');
