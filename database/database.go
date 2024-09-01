@@ -2,11 +2,16 @@ package database
 
 import (
 	"database/sql"
+	"embed"
 	"fmt"
+	"github.com/pressly/goose/v3"
 	"log/slog"
 
 	_ "github.com/go-sql-driver/mysql"
 )
+
+//go:embed schema/*.sql
+var embedMigrations embed.FS
 
 type config struct {
 	host     string
@@ -77,4 +82,21 @@ func NewConnection(opts ...Opts) (db *sql.DB, err error) {
 
 	slog.Info("Connected to database", "host", c.host, "port", c.port, "username", c.username, "database", c.database)
 	return db, nil
+}
+
+func MigrateSchema(db *sql.DB) error {
+	slog.Info("Migrating schema")
+	goose.SetBaseFS(embedMigrations)
+
+	err := goose.SetDialect("mysql")
+	if err != nil {
+		return err
+	}
+
+	err = goose.Up(db, "schema")
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

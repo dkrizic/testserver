@@ -97,9 +97,10 @@ func (s *Service) Run() error {
 		return err
 	}
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = defaultPort
+	err = database.MigrateSchema(db)
+	if err != nil {
+		slog.Error("Failed to migrate schema", "error", err)
+		return err
 	}
 
 	mux := http.NewServeMux()
@@ -122,7 +123,7 @@ func (s *Service) Run() error {
 	logHandler := log2.LogHandler(mux)
 
 	server := &http.Server{
-		Addr:    ":" + port,
+		Addr:    s.Port,
 		Handler: logHandler,
 	}
 
