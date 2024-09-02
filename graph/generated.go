@@ -39,8 +39,10 @@ type Config struct {
 }
 
 type ResolverRoot interface {
+	Asset() AssetResolver
 	Mutation() MutationResolver
 	Query() QueryResolver
+	Tag() TagResolver
 }
 
 type DirectiveRoot struct {
@@ -88,6 +90,9 @@ type ComplexityRoot struct {
 	}
 }
 
+type AssetResolver interface {
+	TagValues(ctx context.Context, obj *model.Asset) ([]*model.TagValue, error)
+}
 type MutationResolver interface {
 	CreateTag(ctx context.Context, tagName string) (*model.Tag, error)
 	CreateAsset(ctx context.Context, assetName string) (*model.Asset, error)
@@ -100,6 +105,9 @@ type QueryResolver interface {
 	Asset(ctx context.Context, id *string, skip *int, limit *int) ([]*model.Asset, error)
 	TagValue(ctx context.Context, id *string, skip *int, limit *int) ([]*model.TagValue, error)
 	Search(ctx context.Context, input model.Search, skip *int, limit *int) (*model.SearchResult, error)
+}
+type TagResolver interface {
+	Assets(ctx context.Context, obj *model.Tag) ([]*model.Asset, error)
 }
 
 type executableSchema struct {
@@ -810,7 +818,7 @@ func (ec *executionContext) _Asset_tagValues(ctx context.Context, field graphql.
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.TagValues, nil
+		return ec.resolvers.Asset().TagValues(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -831,8 +839,8 @@ func (ec *executionContext) fieldContext_Asset_tagValues(_ context.Context, fiel
 	fc = &graphql.FieldContext{
 		Object:     "Asset",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
@@ -1814,7 +1822,7 @@ func (ec *executionContext) _Tag_assets(ctx context.Context, field graphql.Colle
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Assets, nil
+		return ec.resolvers.Tag().Assets(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1835,8 +1843,8 @@ func (ec *executionContext) fieldContext_Tag_assets(_ context.Context, field gra
 	fc = &graphql.FieldContext{
 		Object:     "Tag",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
@@ -3999,18 +4007,49 @@ func (ec *executionContext) _Asset(ctx context.Context, sel ast.SelectionSet, ob
 		case "id":
 			out.Values[i] = ec._Asset_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "name":
 			out.Values[i] = ec._Asset_name(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "tagValues":
-			out.Values[i] = ec._Asset_tagValues(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Asset_tagValues(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
 			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -4312,18 +4351,49 @@ func (ec *executionContext) _Tag(ctx context.Context, sel ast.SelectionSet, obj 
 		case "id":
 			out.Values[i] = ec._Tag_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "name":
 			out.Values[i] = ec._Tag_name(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "assets":
-			out.Values[i] = ec._Tag_assets(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Tag_assets(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
 			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}

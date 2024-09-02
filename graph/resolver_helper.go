@@ -43,86 +43,6 @@ func (r *Resolver) assetById(ctx context.Context, id string) (*model.Asset, erro
 	return &asset, nil
 }
 
-func (r *Resolver) assetsByTagId(ctx context.Context, id string) ([]*model.Asset, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "assetsByTagId")
-	defer span.End()
-	span.SetAttributes(attribute.String("id", id))
-	slog.DebugContext(ctx, "assetsByTagId", "id", id)
-
-	query := "SELECT asset_id FROM tagvalue WHERE tag_id = ?"
-	span.SetAttributes(
-		attribute.String("db.query.text", query),
-		attribute.String("db.parameter.id", id))
-	result, err := r.dB.Query(query, id)
-	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, err
-	}
-	defer result.Close()
-
-	assets := []*model.Asset{}
-	for result.Next() {
-		var asset model.Asset
-		err := result.Scan(&asset.ID)
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
-			return nil, err
-		}
-		asset.TagValues, err = r.tagValuesByAssetId(ctx, asset.ID)
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
-			return nil, err
-		}
-		assets = append(assets, &asset)
-	}
-	span.SetAttributes(attribute.Int("assets.count", len(assets)))
-	span.SetStatus(codes.Ok, "assetsByTagId completed")
-	return assets, nil
-}
-
-func (r *Resolver) tagValuesByAssetId(ctx context.Context, id string) ([]*model.TagValue, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "tagValuesByAssetId")
-	defer span.End()
-	span.SetAttributes(attribute.String("id", id))
-	slog.InfoContext(ctx, "tagValuesByAssetId", "id", id)
-
-	query := "SELECT id,tag_id,asset_id,value FROM tagvalue WHERE asset_id = ?"
-	span.SetAttributes(
-		attribute.String("db.query.text", query),
-		attribute.String("db.parameter.id", id))
-	result, err := r.dB.Query(query, id)
-	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, err
-	}
-	defer result.Close()
-
-	tagValues := []*model.TagValue{}
-	for result.Next() {
-		tagValueTemp := &database.TagValue{}
-		err := result.Scan(&tagValueTemp.ID, &tagValueTemp.TagID, &tagValueTemp.AssetID, &tagValueTemp.Value)
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
-			return nil, err
-		}
-		var tagValue model.TagValue
-		tagValue.ID = tagValueTemp.ID
-		tagValue.Tag, err = r.tagById(ctx, tagValueTemp.TagID)
-		tagValue.Asset, err = r.assetById(ctx, tagValueTemp.AssetID)
-		tagValue.Value = tagValueTemp.Value
-		tagValues = append(tagValues, &tagValue)
-	}
-
-	span.SetAttributes(attribute.Int("tagValues.count", len(tagValues)))
-	span.SetStatus(codes.Ok, "tagValuesByAssetId completed")
-	return tagValues, nil
-}
-
 func (r *Resolver) tagValuesByTagId(ctx context.Context, id string) ([]*model.TagValue, error) {
 	ctx, span := telemetry.Tracer().Start(ctx, "tagValuesByTagId")
 	defer span.End()
@@ -220,12 +140,6 @@ func (r *queryResolver) searchAssetName(ctx context.Context, text string) ([]*mo
 			span.SetStatus(codes.Error, err.Error())
 			return nil, err
 		}
-		asset.TagValues, err = r.tagValuesByAssetId(ctx, asset.ID)
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
-			return nil, err
-		}
 		assets = append(assets, &asset)
 	}
 	span.SetAttributes(attribute.Int("assets.count", len(assets)))
@@ -258,7 +172,6 @@ func (r *queryResolver) searchTagName(ctx context.Context, text string) ([]*mode
 		if err != nil {
 			return nil, err
 		}
-		tag.Assets, err = r.assetsByTagId(ctx, tag.ID)
 		tags = append(tags, &tag)
 	}
 	span.SetAttributes(attribute.Int("tags.count", len(tags)))

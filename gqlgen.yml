@@ -86,11 +86,11 @@ models:
       - github.com/99designs/gqlgen/graphql.Int64
       - github.com/99designs/gqlgen/graphql.Int32
 
-#    Tag:
-#      fields:
-#        assets:
-#          resolver: true
-#    Asset:
-#      fields:
-#        tagValues:
-#          resolver: true
+  Tag:
+    fields:
+      assets:
+        resolver: true
+  Asset:
+    fields:
+      tagValues:
+        resolver: true

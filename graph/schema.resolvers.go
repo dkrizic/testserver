@@ -17,6 +17,46 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// TagValues is the resolver for the tagValues field.
+func (r *assetResolver) TagValues(ctx context.Context, obj *model.Asset) ([]*model.TagValue, error) {
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(attribute.String("id", obj.ID))
+	slog.InfoContext(ctx, "TagValues(byAsset)", "id", obj.ID)
+
+	query := "SELECT id,tag_id,asset_id,value FROM tagvalue WHERE asset_id = ?"
+	span.SetAttributes(
+		attribute.String("db.query.text", query),
+		attribute.String("db.parameter.id", obj.ID))
+	result, err := r.dB.Query(query, obj)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return nil, err
+	}
+	defer result.Close()
+
+	tagValues := []*model.TagValue{}
+	for result.Next() {
+		tagValueTemp := &database.TagValue{}
+		err := result.Scan(&tagValueTemp.ID, &tagValueTemp.TagID, &tagValueTemp.AssetID, &tagValueTemp.Value)
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			return nil, err
+		}
+		var tagValue model.TagValue
+		tagValue.ID = tagValueTemp.ID
+		tagValue.Tag, err = r.tagById(ctx, tagValueTemp.TagID)
+		tagValue.Asset, err = r.assetById(ctx, tagValueTemp.AssetID)
+		tagValue.Value = tagValueTemp.Value
+		tagValues = append(tagValues, &tagValue)
+	}
+
+	span.SetAttributes(attribute.Int("tagValues.count", len(tagValues)))
+	span.SetStatus(codes.Ok, "tagValuesByAssetId completed")
+	return tagValues, nil
+}
+
 // CreateTag is the resolver for the createTag field.
 func (r *mutationResolver) CreateTag(ctx context.Context, tagName string) (*model.Tag, error) {
 	slog.Info("Create tag", "name", tagName)
@@ -125,7 +165,6 @@ func (r *queryResolver) Tag(ctx context.Context, id *string, skip *int, limit *i
 			span.SetStatus(codes.Error, err.Error())
 			return nil, err
 		}
-		tag.Assets, err = r.assetsByTagId(ctx, tag.ID)
 		tags = append(tags, &tag)
 	}
 	span.SetAttributes(attribute.Int("tags.count", len(tags)))
@@ -169,12 +208,6 @@ func (r *queryResolver) Asset(ctx context.Context, id *string, skip *int, limit 
 	for result.Next() {
 		var asset model.Asset
 		err := result.Scan(&asset.ID, &asset.Name)
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
-			return nil, err
-		}
-		asset.TagValues, err = r.tagValuesByAssetId(ctx, asset.ID)
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
@@ -285,11 +318,53 @@ func (r *queryResolver) Search(ctx context.Context, input model.Search, skip *in
 	return searchResult, nil
 }
 
+// Assets is the resolver for the assets field.
+func (r *tagResolver) Assets(ctx context.Context, obj *model.Tag) ([]*model.Asset, error) {
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(attribute.String("id", obj.ID))
+	slog.DebugContext(ctx, "Assets(byTag)", "id", obj.ID)
+
+	query := "SELECT asset_id FROM tagvalue WHERE tag_id = ?"
+	span.SetAttributes(
+		attribute.String("db.query.text", query),
+		attribute.String("db.parameter.id", obj.ID))
+	result, err := r.dB.Query(query, obj)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return nil, err
+	}
+	defer result.Close()
+
+	assets := []*model.Asset{}
+	for result.Next() {
+		var asset model.Asset
+		err := result.Scan(&asset.ID)
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			return nil, err
+		}
+		assets = append(assets, &asset)
+	}
+	span.SetAttributes(attribute.Int("assets.count", len(assets)))
+	span.SetStatus(codes.Ok, "assetsByTagId completed")
+	return assets, nil
+}
+
+// Asset returns AssetResolver implementation.
+func (r *Resolver) Asset() AssetResolver { return &assetResolver{r} }
+
 // Mutation returns MutationResolver implementation.
 func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
 
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
+// Tag returns TagResolver implementation.
+func (r *Resolver) Tag() TagResolver { return &tagResolver{r} }
+
+type assetResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
+type tagResolver struct{ *Resolver }
