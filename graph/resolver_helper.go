@@ -47,7 +47,7 @@ func (r *Resolver) assetsByTagId(ctx context.Context, id string) ([]*model.Asset
 	ctx, span := telemetry.Tracer().Start(ctx, "assetsByTagId")
 	defer span.End()
 	span.SetAttributes(attribute.String("id", id))
-	slog.DebugContext(ctx, "AssetsByTagId", "id", id)
+	slog.DebugContext(ctx, "assetsByTagId", "id", id)
 
 	query := "SELECT asset_id FROM tagvalue WHERE tag_id = ?"
 	span.SetAttributes(
@@ -127,7 +127,7 @@ func (r *Resolver) tagValuesByTagId(ctx context.Context, id string) ([]*model.Ta
 	ctx, span := telemetry.Tracer().Start(ctx, "tagValuesByTagId")
 	defer span.End()
 	span.SetAttributes(attribute.String("id", id))
-	slog.DebugContext(ctx, "TagValuesByTagId", "id", id)
+	slog.DebugContext(ctx, "tagValuesByTagId", "id", id)
 
 	query := "SELECT id,tag_id,asset_id,value FROM tagvalue WHERE tag_id = ?"
 	span.SetAttributes(
@@ -164,7 +164,7 @@ func (r *Resolver) tagById(ctx context.Context, id string) (*model.Tag, error) {
 	ctx, span := telemetry.Tracer().Start(ctx, "tagById")
 	defer span.End()
 	span.SetAttributes(attribute.String("id", id))
-	slog.DebugContext(ctx, "TagById", "id", id)
+	slog.DebugContext(ctx, "tagById", "id", id)
 
 	query := "SELECT id,name FROM tag WHERE id = ?"
 	span.SetAttributes(
@@ -197,7 +197,7 @@ func (r *queryResolver) searchAssetName(ctx context.Context, text string) ([]*mo
 	defer span.End()
 	span.SetAttributes(attribute.String("text", text))
 
-	slog.InfoContext(ctx, "SearchAssetName", "text", text)
+	slog.InfoContext(ctx, "searchAssetName", "text", text)
 	query := "SELECT id,name FROM asset WHERE name LIKE ?"
 	wildcard := fmt.Sprintf("%%%s%%", text)
 	span.SetAttributes(
@@ -271,7 +271,7 @@ func (r *queryResolver) searchTagValue(ctx context.Context, text string) ([]*mod
 	defer span.End()
 	span.SetAttributes(attribute.String("text", text))
 
-	slog.DebugContext(ctx, "SearchTagValue", "text", text)
+	slog.DebugContext(ctx, "searchTagValue", "text", text)
 	query := "SELECT id,tag_id,asset_id,value FROM tagvalue WHERE value LIKE ?"
 	wildcard := fmt.Sprintf("%%%s%%", text)
 	result, err := r.dB.Query(query, wildcard)

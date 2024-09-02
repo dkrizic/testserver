@@ -22,9 +22,9 @@ input Search {
 }
 
 type SearchResult {
-  tags: [Tag!]!
-  assets: [Asset!]!
-  tagValues: [TagValue!]!
+  tag: [Tag!]!
+  asset: [Asset!]!
+  tagValue: [TagValue!]!
 }
 
 type Query {

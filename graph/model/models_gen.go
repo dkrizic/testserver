@@ -32,9 +32,9 @@ type Search struct {
 }
 
 type SearchResult struct {
-	Tags      []*Tag      `json:"tags"`
-	Assets    []*Asset    `json:"assets"`
-	TagValues []*TagValue `json:"tagValues"`
+	Tag      []*Tag      `json:"tag"`
+	Asset    []*Asset    `json:"asset"`
+	TagValue []*TagValue `json:"tagValue"`
 }
 
 type Tag struct {

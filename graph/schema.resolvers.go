@@ -83,62 +83,13 @@ func (r *mutationResolver) DeleteTagValue(ctx context.Context, input model.Delet
 	return &model.TagValue{ID: fmt.Sprintf("%d", id)}, nil
 }
 
-// Search is the resolver for the search field.
-func (r *queryResolver) Search(ctx context.Context, input model.Search, skip *int, limit *int) (*model.SearchResult, error) {
-	span := trace.SpanFromContext(ctx)
-	span.SetAttributes(
-		attribute.String("query", input.Text),
-		attribute.Bool("searchAssetName", input.SearchAssetName),
-		attribute.Bool("searchTagName", input.SearchTagName),
-		attribute.Bool("searchTagValue", input.SearchTagValue))
-
-	slog.Info("Search", "query", input.Text, "searchAssetName", input.SearchAssetName, "searchTagName", input.SearchTagName, "searchTagValue", input.SearchTagValue)
-	searchResult := &model.SearchResult{}
-	if input.SearchAssetName {
-		assets, err := r.searchAssetName(ctx, input.Text)
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
-			return nil, err
-		}
-		searchResult.Assets = assets
-	}
-	if input.SearchTagName {
-		tags, err := r.searchTagName(ctx, input.Text)
-		if err != nil {
-			return nil, err
-		}
-		searchResult.Tags = tags
-	}
-	if input.SearchTagValue {
-		tagValues, err := r.searchTagValue(ctx, input.Text)
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
-			return nil, err
-		}
-		searchResult.TagValues = tagValues
-	}
-
-	span.SetStatus(codes.Ok, "Search completed")
-	return searchResult, nil
-}
-
-// Mutation returns MutationResolver implementation.
-func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
-
-// Query returns QueryResolver implementation.
-func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
-
-type mutationResolver struct{ *Resolver }
-type queryResolver struct{ *Resolver }
-
+// Tag is the resolver for the tag field.
 func (r *queryResolver) Tag(ctx context.Context, id *string, skip *int, limit *int) ([]*model.Tag, error) {
 	span := trace.SpanFromContext(ctx)
 	if id != nil {
 		span.SetAttributes(attribute.String("id", *id))
 	}
-	slog.Info("Tags", "id", id, "skip", skip, "limit", limit)
+	slog.Info("Tag", "id", id, "skip", skip, "limit", limit)
 	var result *sql.Rows
 	var err error
 	span.SetAttributes(
@@ -182,12 +133,13 @@ func (r *queryResolver) Tag(ctx context.Context, id *string, skip *int, limit *i
 	return tags, nil
 }
 
+// Asset is the resolver for the asset field.
 func (r *queryResolver) Asset(ctx context.Context, id *string, skip *int, limit *int) ([]*model.Asset, error) {
 	span := trace.SpanFromContext(ctx)
 	if id != nil {
 		span.SetAttributes(attribute.String("id", *id))
 	}
-	slog.Info("Assets", "id", id, "skip", skip, "limit", limit)
+	slog.Info("Asset", "id", id, "skip", skip, "limit", limit)
 	var result *sql.Rows
 	var err error
 	if id != nil {
@@ -234,12 +186,14 @@ func (r *queryResolver) Asset(ctx context.Context, id *string, skip *int, limit 
 	span.SetStatus(codes.Ok, "Assets completed")
 	return assets, nil
 }
+
+// TagValue is the resolver for the tagValue field.
 func (r *queryResolver) TagValue(ctx context.Context, id *string, skip *int, limit *int) ([]*model.TagValue, error) {
 	span := trace.SpanFromContext(ctx)
 	if id != nil {
 		span.SetAttributes(attribute.String("id", *id))
 	}
-	slog.Info("TagValues", "id", id, "skip", skip, "limit", limit)
+	slog.Info("TagValue", "id", id, "skip", skip, "limit", limit)
 	var result *sql.Rows
 	var err error
 	if id != nil {
@@ -285,3 +239,57 @@ func (r *queryResolver) TagValue(ctx context.Context, id *string, skip *int, lim
 	span.SetStatus(codes.Ok, "TagValues completed")
 	return tagValues, nil
 }
+
+// Search is the resolver for the search field.
+func (r *queryResolver) Search(ctx context.Context, input model.Search, skip *int, limit *int) (*model.SearchResult, error) {
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.String("query", input.Text),
+		attribute.Bool("searchAssetName", input.SearchAssetName),
+		attribute.Bool("searchTagName", input.SearchTagName),
+		attribute.Bool("searchTagValue", input.SearchTagValue))
+
+	slog.Info("Search",
+		"text", input.Text,
+		"searchAssetName", input.SearchAssetName,
+		"searchTagName", input.SearchTagName,
+		"searchTagValue", input.SearchTagValue)
+	searchResult := &model.SearchResult{}
+	if input.SearchAssetName {
+		assets, err := r.searchAssetName(ctx, input.Text)
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			return nil, err
+		}
+		searchResult.Asset = assets
+	}
+	if input.SearchTagName {
+		tags, err := r.searchTagName(ctx, input.Text)
+		if err != nil {
+			return nil, err
+		}
+		searchResult.Tag = tags
+	}
+	if input.SearchTagValue {
+		tagValues, err := r.searchTagValue(ctx, input.Text)
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			return nil, err
+		}
+		searchResult.TagValue = tagValues
+	}
+
+	span.SetStatus(codes.Ok, "Search completed")
+	return searchResult, nil
+}
+
+// Mutation returns MutationResolver implementation.
+func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
+
+// Query returns QueryResolver implementation.
+func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
+
+type mutationResolver struct{ *Resolver }
+type queryResolver struct{ *Resolver }

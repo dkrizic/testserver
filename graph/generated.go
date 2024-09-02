@@ -69,9 +69,9 @@ type ComplexityRoot struct {
 	}
 
 	SearchResult struct {
-		Assets    func(childComplexity int) int
-		TagValues func(childComplexity int) int
-		Tags      func(childComplexity int) int
+		Asset    func(childComplexity int) int
+		Tag      func(childComplexity int) int
+		TagValue func(childComplexity int) int
 	}
 
 	Tag struct {
@@ -250,26 +250,26 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.TagValue(childComplexity, args["id"].(*string), args["skip"].(*int), args["limit"].(*int)), true
 
-	case "SearchResult.assets":
-		if e.complexity.SearchResult.Assets == nil {
+	case "SearchResult.asset":
+		if e.complexity.SearchResult.Asset == nil {
 			break
 		}
 
-		return e.complexity.SearchResult.Assets(childComplexity), true
+		return e.complexity.SearchResult.Asset(childComplexity), true
 
-	case "SearchResult.tagValues":
-		if e.complexity.SearchResult.TagValues == nil {
+	case "SearchResult.tag":
+		if e.complexity.SearchResult.Tag == nil {
 			break
 		}
 
-		return e.complexity.SearchResult.TagValues(childComplexity), true
+		return e.complexity.SearchResult.Tag(childComplexity), true
 
-	case "SearchResult.tags":
-		if e.complexity.SearchResult.Tags == nil {
+	case "SearchResult.tagValue":
+		if e.complexity.SearchResult.TagValue == nil {
 			break
 		}
 
-		return e.complexity.SearchResult.Tags(childComplexity), true
+		return e.complexity.SearchResult.TagValue(childComplexity), true
 
 	case "Tag.assets":
 		if e.complexity.Tag.Assets == nil {
@@ -1401,12 +1401,12 @@ func (ec *executionContext) fieldContext_Query_search(ctx context.Context, field
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "tags":
-				return ec.fieldContext_SearchResult_tags(ctx, field)
-			case "assets":
-				return ec.fieldContext_SearchResult_assets(ctx, field)
-			case "tagValues":
-				return ec.fieldContext_SearchResult_tagValues(ctx, field)
+			case "tag":
+				return ec.fieldContext_SearchResult_tag(ctx, field)
+			case "asset":
+				return ec.fieldContext_SearchResult_asset(ctx, field)
+			case "tagValue":
+				return ec.fieldContext_SearchResult_tagValue(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type SearchResult", field.Name)
 		},
@@ -1554,8 +1554,8 @@ func (ec *executionContext) fieldContext_Query___schema(_ context.Context, field
 	return fc, nil
 }
 
-func (ec *executionContext) _SearchResult_tags(ctx context.Context, field graphql.CollectedField, obj *model.SearchResult) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_SearchResult_tags(ctx, field)
+func (ec *executionContext) _SearchResult_tag(ctx context.Context, field graphql.CollectedField, obj *model.SearchResult) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SearchResult_tag(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1568,7 +1568,7 @@ func (ec *executionContext) _SearchResult_tags(ctx context.Context, field graphq
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Tags, nil
+		return obj.Tag, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1585,7 +1585,7 @@ func (ec *executionContext) _SearchResult_tags(ctx context.Context, field graphq
 	return ec.marshalNTag2ᚕᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐTagᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_SearchResult_tags(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_SearchResult_tag(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "SearchResult",
 		Field:      field,
@@ -1606,8 +1606,8 @@ func (ec *executionContext) fieldContext_SearchResult_tags(_ context.Context, fi
 	return fc, nil
 }
 
-func (ec *executionContext) _SearchResult_assets(ctx context.Context, field graphql.CollectedField, obj *model.SearchResult) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_SearchResult_assets(ctx, field)
+func (ec *executionContext) _SearchResult_asset(ctx context.Context, field graphql.CollectedField, obj *model.SearchResult) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SearchResult_asset(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1620,7 +1620,7 @@ func (ec *executionContext) _SearchResult_assets(ctx context.Context, field grap
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Assets, nil
+		return obj.Asset, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1637,7 +1637,7 @@ func (ec *executionContext) _SearchResult_assets(ctx context.Context, field grap
 	return ec.marshalNAsset2ᚕᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐAssetᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_SearchResult_assets(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_SearchResult_asset(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "SearchResult",
 		Field:      field,
@@ -1658,8 +1658,8 @@ func (ec *executionContext) fieldContext_SearchResult_assets(_ context.Context, 
 	return fc, nil
 }
 
-func (ec *executionContext) _SearchResult_tagValues(ctx context.Context, field graphql.CollectedField, obj *model.SearchResult) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_SearchResult_tagValues(ctx, field)
+func (ec *executionContext) _SearchResult_tagValue(ctx context.Context, field graphql.CollectedField, obj *model.SearchResult) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SearchResult_tagValue(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1672,7 +1672,7 @@ func (ec *executionContext) _SearchResult_tagValues(ctx context.Context, field g
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.TagValues, nil
+		return obj.TagValue, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1689,7 +1689,7 @@ func (ec *executionContext) _SearchResult_tagValues(ctx context.Context, field g
 	return ec.marshalNTagValue2ᚕᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐTagValueᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_SearchResult_tagValues(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_SearchResult_tagValue(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "SearchResult",
 		Field:      field,
@@ -4260,18 +4260,18 @@ func (ec *executionContext) _SearchResult(ctx context.Context, sel ast.Selection
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("SearchResult")
-		case "tags":
-			out.Values[i] = ec._SearchResult_tags(ctx, field, obj)
+		case "tag":
+			out.Values[i] = ec._SearchResult_tag(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "assets":
-			out.Values[i] = ec._SearchResult_assets(ctx, field, obj)
+		case "asset":
+			out.Values[i] = ec._SearchResult_asset(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "tagValues":
-			out.Values[i] = ec._SearchResult_tagValues(ctx, field, obj)
+		case "tagValue":
+			out.Values[i] = ec._SearchResult_tagValue(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
