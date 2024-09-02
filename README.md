@@ -2,11 +2,21 @@
 
 ## Features
 
-* Multi stage: Uses Multi stage build for building the container
-* Database ownershop: Takes care of the database schema by itself
-* all runtime parameters are passed either via environment variables or command line arguments
-* JSON logging incuding trace_id and span_id
-* OpenTelemetry: Exploses traces in OTLP to a configurable endpoint
+* *Multi stage*: Uses Multi stage build for building the container
+* *Database ownership*: Takes care of the database schema by itself
+* *Configuration*: all runtime parameters are passed either via environment variables or command line arguments
+  * Kubernetes ConfigMap
+  * Kubernetes Secrets
+* *Logging*:
+  * JSON logging
+  * Logging of trace_id and span_id for correlation
+* Authentication: Validate the JWT token
+  * Token check can be disabled for easier development
+  * The following entries are written to the span
+    * enduser.id
+    * enduser.roles
+* OpenTelemetry: Exposes traces in OTLP to a configurable endpoint
+* *Probes*: Exposes readiness and liveness probes
+  * /health endpoint
 * Version awareness: Exploses the own version via /version endpoint
-* Health endpoint: Exploses a health endpoint for readiness and liveness probes
 
