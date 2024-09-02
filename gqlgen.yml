@@ -94,3 +94,9 @@ models:
     fields:
       tagValues:
         resolver: true
+  TagValue:
+    fields:
+      tag:
+        resolver: true
+      asset:
+        resolver: true

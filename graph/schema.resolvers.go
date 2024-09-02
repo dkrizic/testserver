@@ -27,7 +27,7 @@ func (r *assetResolver) TagValues(ctx context.Context, obj *model.Asset) ([]*mod
 	span.SetAttributes(
 		attribute.String("db.query.text", query),
 		attribute.String("db.parameter.id", obj.ID))
-	result, err := r.dB.Query(query, obj)
+	result, err := r.dB.Query(query, obj.ID)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -46,8 +46,6 @@ func (r *assetResolver) TagValues(ctx context.Context, obj *model.Asset) ([]*mod
 		}
 		var tagValue model.TagValue
 		tagValue.ID = tagValueTemp.ID
-		tagValue.Tag, err = r.tagById(ctx, tagValueTemp.TagID)
-		tagValue.Asset, err = r.assetById(ctx, tagValueTemp.AssetID)
 		tagValue.Value = tagValueTemp.Value
 		tagValues = append(tagValues, &tagValue)
 	}
@@ -258,8 +256,6 @@ func (r *queryResolver) TagValue(ctx context.Context, id *string, skip *int, lim
 		err := result.Scan(&tagValueTemp.ID, &tagValueTemp.TagID, &tagValueTemp.AssetID, &tagValueTemp.Value)
 		var tagValue model.TagValue
 		tagValue.ID = tagValueTemp.ID
-		tagValue.Tag, err = r.tagById(ctx, tagValueTemp.TagID)
-		tagValue.Asset, err = r.assetById(ctx, tagValueTemp.AssetID)
 		tagValue.Value = tagValueTemp.Value
 
 		if err != nil {
@@ -324,11 +320,11 @@ func (r *tagResolver) Assets(ctx context.Context, obj *model.Tag) ([]*model.Asse
 	span.SetAttributes(attribute.String("id", obj.ID))
 	slog.DebugContext(ctx, "Assets(byTag)", "id", obj.ID)
 
-	query := "SELECT asset_id FROM tagvalue WHERE tag_id = ?"
+	query := "SELECT DISTINCT asset.id,asset.name FROM asset,tagvalue WHERE asset.id = tagvalue.asset_id and tagvalue.tag_id = ?"
 	span.SetAttributes(
 		attribute.String("db.query.text", query),
 		attribute.String("db.parameter.id", obj.ID))
-	result, err := r.dB.Query(query, obj)
+	result, err := r.dB.Query(query, obj.ID)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -339,7 +335,7 @@ func (r *tagResolver) Assets(ctx context.Context, obj *model.Tag) ([]*model.Asse
 	assets := []*model.Asset{}
 	for result.Next() {
 		var asset model.Asset
-		err := result.Scan(&asset.ID)
+		err := result.Scan(&asset.ID, &asset.Name)
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
@@ -350,6 +346,68 @@ func (r *tagResolver) Assets(ctx context.Context, obj *model.Tag) ([]*model.Asse
 	span.SetAttributes(attribute.Int("assets.count", len(assets)))
 	span.SetStatus(codes.Ok, "assetsByTagId completed")
 	return assets, nil
+}
+
+// Tag is the resolver for the tag field.
+func (r *tagValueResolver) Tag(ctx context.Context, obj *model.TagValue) (*model.Tag, error) {
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(attribute.String("id", obj.ID))
+	slog.DebugContext(ctx, "Tag(byTagValue)", "id", obj.ID)
+
+	query := "SELECT tag.id,tag.name FROM tag,tagvalue where tagvalue.tag_id = tag.id and tagvalue.id = ?"
+	span.SetAttributes(
+		attribute.String("db.query.text", query),
+		attribute.String("db.parameter.id", obj.ID))
+	result, err := r.dB.Query(query, obj.ID)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return nil, err
+	}
+	defer result.Close()
+
+	var tag model.Tag
+	for result.Next() {
+		err := result.Scan(&tag.ID, &tag.Name)
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			return nil, err
+		}
+	}
+	span.SetStatus(codes.Ok, "tagById completed")
+	return &tag, nil
+}
+
+// Asset is the resolver for the asset field.
+func (r *tagValueResolver) Asset(ctx context.Context, obj *model.TagValue) (*model.Asset, error) {
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(attribute.String("id", obj.ID))
+	slog.DebugContext(ctx, "Asset(byTagValue)", "id", obj.ID)
+
+	query := "SELECT asset.id,asset.name FROM asset,tagvalue where tagvalue.asset_id = asset.id and tagvalue.id = ?"
+	span.SetAttributes(
+		attribute.String("db.query.text", query),
+		attribute.String("db.parameter.id", obj.ID))
+	result, err := r.dB.Query(query, obj.ID)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return nil, err
+	}
+	defer result.Close()
+
+	var asset model.Asset
+	for result.Next() {
+		err := result.Scan(&asset.ID, &asset.Name)
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			return nil, err
+		}
+	}
+	span.SetStatus(codes.Ok, "assetById completed")
+	return &asset, nil
 }
 
 // Asset returns AssetResolver implementation.
@@ -364,7 +422,11 @@ func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 // Tag returns TagResolver implementation.
 func (r *Resolver) Tag() TagResolver { return &tagResolver{r} }
 
+// TagValue returns TagValueResolver implementation.
+func (r *Resolver) TagValue() TagValueResolver { return &tagValueResolver{r} }
+
 type assetResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type tagResolver struct{ *Resolver }
+type tagValueResolver struct{ *Resolver }
