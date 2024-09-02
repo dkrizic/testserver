@@ -224,7 +224,7 @@ func (r *queryResolver) TagValue(ctx context.Context, id *string, skip *int, lim
 	if id != nil {
 		span.SetAttributes(attribute.String("id", *id))
 	}
-	slog.Info("TagValue", "id", id, "skip", skip, "limit", limit)
+	slog.Info("TagValue", "id", id, "skip", *skip, "limit", *limit)
 	var result *sql.Rows
 	var err error
 	if id != nil {
@@ -239,9 +239,9 @@ func (r *queryResolver) TagValue(ctx context.Context, id *string, skip *int, lim
 			return nil, err
 		}
 	} else {
-		query := "SELECT id,tag_id,asset_id,value FROM tagvalue"
+		query := "SELECT id,tag_id,asset_id,value FROM tagvalue limit ?,?"
 		span.SetAttributes(attribute.String("db.query.text", query))
-		result, err = r.dB.Query(query)
+		result, err = r.dB.Query(query, *skip, *limit)
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
