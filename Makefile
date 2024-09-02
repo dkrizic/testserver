@@ -11,3 +11,6 @@ run: build
 
 image:
 	docker build -t testserver .
+
+clean:
+	rm -f testserver
