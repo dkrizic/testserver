@@ -7,6 +7,7 @@ import (
 	"github.com/dkrizic/testserver/graph"
 	"github.com/dkrizic/testserver/service/handler/health"
 	log2 "github.com/dkrizic/testserver/service/handler/log"
+	"github.com/dkrizic/testserver/service/handler/token"
 	"github.com/dkrizic/testserver/service/version"
 	"github.com/ravilushqa/otelgqlgen"
 	"log/slog"
@@ -130,9 +131,16 @@ func (s *Service) Run() error {
 
 	logHandler := log2.LogHandler(mux)
 
+	tokenHandler := token.NewTokenHandler(
+		token.WithCheckToken(s.CheckToken),
+		token.WithAlwaysPass(func(r *http.Request) bool {
+			return r.URL.Path == healthPath || r.URL.Path == versionPath || r.URL.Path == defaultPath
+		}),
+	).TokenHandler(logHandler)
+
 	server := &http.Server{
 		Addr:    s.Port,
-		Handler: logHandler,
+		Handler: tokenHandler,
 	}
 
 	// start server and wait for interrupt signal
