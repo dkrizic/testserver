@@ -26,6 +26,7 @@ const (
 
 type Service struct {
 	Port             string
+	CheckToken       bool
 	DatabaseHost     string
 	DatabasePort     string
 	DatabaseUsername string
@@ -71,11 +72,18 @@ func DatabaseName(name string) Opts {
 	}
 }
 
+func CheckToken(checkToken bool) Opts {
+	return func(s *Service) {
+		s.CheckToken = checkToken
+	}
+}
+
 func NewService(opts ...Opts) (*Service, error) {
 	s := &Service{
 		Port:         defaultPort,
 		DatabaseHost: "localhost",
 		DatabasePort: "3306",
+		CheckToken:   true,
 	}
 	for _, o := range opts {
 		o(s)

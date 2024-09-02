@@ -28,7 +28,8 @@ func main() {
 		"database-port", c.Service().DatabasePort(),
 		"database-user", c.Service().DatabaseUser(),
 		"database-name", c.Service().DatabaseName(),
-		"opentelemetry-endpoint", c.OpenTelemetryEndpoint())
+		"opentelemetry-endpoint", c.OpenTelemetryEndpoint(),
+		"check-token", c.CheckToken())
 
 	var shutdown func(context.Context) error
 	if c.OpenTelemetryEndpoint() != "" {

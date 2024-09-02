@@ -25,6 +25,8 @@ const (
 	keyDatabaseNameEnvironment          = "DATABASE_NAME"
 	keyOpenTelemetryEndpoint            = "opentelemetry-endpoint"
 	keyOpenTelemetryEndpointEnvironment = "OPENTELEMETRY_ENDPOINT"
+	keyCheckToken                       = "check-token"
+	keyCheckTokenEnvironment            = "CHECK_TOKEN"
 )
 
 type Database struct {
@@ -42,6 +44,7 @@ type Token struct {
 type Service struct {
 	port     int
 	database Database
+	token    Token
 }
 
 type Config struct {
@@ -61,6 +64,7 @@ func New() (*Config, error) {
 	flag.StringVar(&c.service.database.password, keyDatabasePassword, lookupEnvOrString(keyDatabasePasswordEnvironment, "postgres"), "The password of the database")
 	flag.StringVar(&c.service.database.name, keyDatabaseName, lookupEnvOrString(keyDatabaseNameEnvironment, "testserver"), "The name of the database")
 	flag.StringVar(&c.openTelemetryEndpoint, keyOpenTelemetryEndpoint, lookupEnvOrString(keyOpenTelemetryEndpointEnvironment, ""), "The OpenTelemetry endpoint")
+	flag.BoolVar(&c.service.token.checkToken, keyCheckToken, lookupEnvOrBool(keyCheckTokenEnvironment, true), "Check the token")
 
 	flag.Parse()
 
@@ -112,6 +116,10 @@ func (c Service) DatabaseName() string {
 
 func (c Config) OpenTelemetryEndpoint() string {
 	return c.openTelemetryEndpoint
+}
+
+func (c Config) CheckToken() bool {
+	return c.service.token.checkToken
 }
 
 func lookupEnvOrString(key string, defaultVal string) string {
