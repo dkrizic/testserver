@@ -4,12 +4,14 @@ package otelslog
 import (
 	"context"
 	"errors"
+	"go.opentelemetry.io/otel/codes"
 	"log/slog"
 
 	"go.opentelemetry.io/otel/trace"
 )
 
 const (
+	mdcKey     = "mdc"
 	traceIDKey = "trace_id"
 	spanIDKey  = "span_id"
 )
@@ -45,20 +47,21 @@ func (h Handler) Handle(ctx context.Context, record slog.Record) error {
 	spanContext := trace.SpanContextFromContext(ctx)
 	span := trace.SpanFromContext(ctx)
 
-	if spanContext.HasTraceID() {
+	if spanContext.HasTraceID() && spanContext.HasSpanID() {
 		traceId := spanContext.TraceID().String()
-		record.AddAttrs(slog.String(traceIDKey, traceId))
-	}
-
-	if spanContext.HasSpanID() {
 		spanId := spanContext.SpanID().String()
-		record.AddAttrs(slog.String(spanIDKey, spanId))
+		// add a mdc field and add trace and span id to it
+		record.Add(mdcKey, map[string]string{
+			traceIDKey: traceId,
+			spanIDKey:  spanId,
+		})
 	}
 
 	if record.Level == slog.LevelError {
 		record.Attrs(func(a slog.Attr) bool {
 			if a.Key == "error" {
 				span.RecordError(errors.New(a.Value.String()))
+				span.SetStatus(codes.Error, a.Value.String())
 				return false
 			}
 			return true
