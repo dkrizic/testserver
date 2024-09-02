@@ -285,7 +285,7 @@ func (r *queryResolver) Search(ctx context.Context, input model.Search, skip *in
 		"searchTagValue", input.SearchTagValue)
 	searchResult := &model.SearchResult{}
 	if input.SearchAssetName {
-		assets, err := r.searchAssetName(ctx, input.Text)
+		assets, err := r.searchAssetName(ctx, input.Text, *skip, *limit)
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
@@ -294,14 +294,14 @@ func (r *queryResolver) Search(ctx context.Context, input model.Search, skip *in
 		searchResult.Asset = assets
 	}
 	if input.SearchTagName {
-		tags, err := r.searchTagName(ctx, input.Text)
+		tags, err := r.searchTagName(ctx, input.Text, *skip, *limit)
 		if err != nil {
 			return nil, err
 		}
 		searchResult.Tag = tags
 	}
 	if input.SearchTagValue {
-		tagValues, err := r.searchTagValue(ctx, input.Text)
+		tagValues, err := r.searchTagValue(ctx, input.Text, *skip, *limit)
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())

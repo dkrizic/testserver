@@ -11,18 +11,18 @@ import (
 	"log/slog"
 )
 
-func (r *queryResolver) searchAssetName(ctx context.Context, text string) ([]*model.Asset, error) {
+func (r *queryResolver) searchAssetName(ctx context.Context, text string, skip int, limit int) ([]*model.Asset, error) {
 	ctx, span := telemetry.Tracer().Start(ctx, "searchAssetName")
 	defer span.End()
 	span.SetAttributes(attribute.String("text", text))
 
-	slog.InfoContext(ctx, "searchAssetName", "text", text)
-	query := "SELECT id,name FROM asset WHERE name LIKE ?"
+	slog.InfoContext(ctx, "searchAssetName", "text", text, "skip", skip, "limit", limit)
+	query := "SELECT id,name FROM asset WHERE name LIKE ? LIMIT ?,?"
 	wildcard := fmt.Sprintf("%%%s%%", text)
 	span.SetAttributes(
 		attribute.String("db.query.text", query),
 		attribute.String("db.parameter.text", wildcard))
-	result, err := r.dB.Query(query, wildcard)
+	result, err := r.dB.Query(query, wildcard, skip, limit)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -46,17 +46,17 @@ func (r *queryResolver) searchAssetName(ctx context.Context, text string) ([]*mo
 	return assets, nil
 }
 
-func (r *queryResolver) searchTagName(ctx context.Context, text string) ([]*model.Tag, error) {
+func (r *queryResolver) searchTagName(ctx context.Context, text string, skip int, limit int) ([]*model.Tag, error) {
 	ctx, span := telemetry.Tracer().Start(ctx, "searchTagName")
 	defer span.End()
-	slog.DebugContext(ctx, "searchTagName", "text", text)
+	slog.DebugContext(ctx, "searchTagName", "text", text, "skip", skip, "limit", limit)
 
-	query := "SELECT id,name FROM tag WHERE name LIKE ?"
+	query := "SELECT id,name FROM tag WHERE name LIKE ? LIMIT ?,?"
 	wildcard := fmt.Sprintf("%%%s%%", text)
 	span.SetAttributes(
 		attribute.String("db.query.text", query),
 		attribute.String("db.parameter.text", wildcard))
-	result, err := r.dB.Query(query, wildcard)
+	result, err := r.dB.Query(query, wildcard, skip, limit)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -78,15 +78,15 @@ func (r *queryResolver) searchTagName(ctx context.Context, text string) ([]*mode
 	return tags, nil
 }
 
-func (r *queryResolver) searchTagValue(ctx context.Context, text string) ([]*model.TagValue, error) {
+func (r *queryResolver) searchTagValue(ctx context.Context, text string, skip int, limit int) ([]*model.TagValue, error) {
 	ctx, span := telemetry.Tracer().Start(ctx, "searchTagValue")
 	defer span.End()
 	span.SetAttributes(attribute.String("text", text))
 
-	slog.DebugContext(ctx, "searchTagValue", "text", text)
-	query := "SELECT id,tag_id,asset_id,value FROM tagvalue WHERE value LIKE ?"
+	slog.DebugContext(ctx, "searchTagValue", "text", text, "skip", skip, "limit", limit)
+	query := "SELECT id,tag_id,asset_id,value FROM tagvalue WHERE value LIKE ? LIMIT ?,?"
 	wildcard := fmt.Sprintf("%%%s%%", text)
-	result, err := r.dB.Query(query, wildcard)
+	result, err := r.dB.Query(query, wildcard, skip, limit)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())

@@ -16,9 +16,9 @@ type Asset {
 
 input Search {
   text: String!
-  searchTagName: Boolean! = true
-  searchTagValue: Boolean! = true
-  searchAssetName: Boolean! = true
+  searchTagName: Boolean! = false
+  searchTagValue: Boolean! = false
+  searchAssetName: Boolean! = false
 }
 
 type SearchResult {

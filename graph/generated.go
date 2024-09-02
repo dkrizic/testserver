@@ -3906,13 +3906,13 @@ func (ec *executionContext) unmarshalInputSearch(ctx context.Context, obj interf
 	}
 
 	if _, present := asMap["searchTagName"]; !present {
-		asMap["searchTagName"] = true
+		asMap["searchTagName"] = false
 	}
 	if _, present := asMap["searchTagValue"]; !present {
-		asMap["searchTagValue"] = true
+		asMap["searchTagValue"] = false
 	}
 	if _, present := asMap["searchAssetName"]; !present {
-		asMap["searchAssetName"] = true
+		asMap["searchAssetName"] = false
 	}
 
 	fieldsInOrder := [...]string{"text", "searchTagName", "searchTagValue", "searchAssetName"}
