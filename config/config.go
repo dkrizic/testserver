@@ -27,13 +27,21 @@ const (
 	keyOpenTelemetryEndpointEnvironment = "OPENTELEMETRY_ENDPOINT"
 )
 
+type Database struct {
+	host     string
+	port     int
+	user     string
+	password string
+	name     string
+}
+
+type Token struct {
+	checkToken bool
+}
+
 type Service struct {
-	port             int
-	databaseHost     string
-	databasePort     int
-	databaseUser     string
-	databasePassword string
-	databaseName     string
+	port     int
+	database Database
 }
 
 type Config struct {
@@ -47,11 +55,11 @@ func New() (*Config, error) {
 	}
 	verbose := flag.Int(keyVerbose, lookupEnvOrInt(keyVerboseEnvironment, 0), "Verbosity level, 0=info, 1=debug. Overrides the environment variable VERBOSE.")
 	flag.IntVar(&c.service.port, keyPort, lookupEnvOrInt(keyPortEnvironment, 8000), "The port to listen on.")
-	flag.StringVar(&c.service.databaseHost, keyDatabaseHost, lookupEnvOrString(keyDatabaseHostEnvironment, "localhost"), "The host of the database")
-	flag.IntVar(&c.service.databasePort, keyDatabasePort, lookupEnvOrInt(keyDatabasePortEnvironment, 3306), "The port of the database")
-	flag.StringVar(&c.service.databaseUser, keyDatabaseUser, lookupEnvOrString(keyDatabaseUserEnvironment, "testserver"), "The user of the database")
-	flag.StringVar(&c.service.databasePassword, keyDatabasePassword, lookupEnvOrString(keyDatabasePasswordEnvironment, "postgres"), "The password of the database")
-	flag.StringVar(&c.service.databaseName, keyDatabaseName, lookupEnvOrString(keyDatabaseNameEnvironment, "testserver"), "The name of the database")
+	flag.StringVar(&c.service.database.host, keyDatabaseHost, lookupEnvOrString(keyDatabaseHostEnvironment, "localhost"), "The host of the database")
+	flag.IntVar(&c.service.database.port, keyDatabasePort, lookupEnvOrInt(keyDatabasePortEnvironment, 3306), "The port of the database")
+	flag.StringVar(&c.service.database.user, keyDatabaseUser, lookupEnvOrString(keyDatabaseUserEnvironment, "testserver"), "The user of the database")
+	flag.StringVar(&c.service.database.password, keyDatabasePassword, lookupEnvOrString(keyDatabasePasswordEnvironment, "postgres"), "The password of the database")
+	flag.StringVar(&c.service.database.name, keyDatabaseName, lookupEnvOrString(keyDatabaseNameEnvironment, "testserver"), "The name of the database")
 	flag.StringVar(&c.openTelemetryEndpoint, keyOpenTelemetryEndpoint, lookupEnvOrString(keyOpenTelemetryEndpointEnvironment, ""), "The OpenTelemetry endpoint")
 
 	flag.Parse()
@@ -83,23 +91,23 @@ func (c Service) Port() int {
 }
 
 func (c Service) DatabaseHost() string {
-	return c.databaseHost
+	return c.database.host
 }
 
 func (c Service) DatabasePort() int {
-	return c.databasePort
+	return c.database.port
 }
 
 func (c Service) DatabaseUser() string {
-	return c.databaseUser
+	return c.database.user
 }
 
 func (c Service) DatabasePassword() string {
-	return c.databasePassword
+	return c.database.password
 }
 
 func (c Service) DatabaseName() string {
-	return c.databaseName
+	return c.database.name
 }
 
 func (c Config) OpenTelemetryEndpoint() string {
