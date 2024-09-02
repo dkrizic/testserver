@@ -62,10 +62,10 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		Assets    func(childComplexity int, id *string, skip *int, limit *int) int
-		Search    func(childComplexity int, input model.Search, skip *int, limit *int) int
-		TagValues func(childComplexity int, id *string, skip *int, limit *int) int
-		Tags      func(childComplexity int, id *string, skip *int, limit *int) int
+		Asset    func(childComplexity int, id *string, skip *int, limit *int) int
+		Search   func(childComplexity int, input model.Search, skip *int, limit *int) int
+		Tag      func(childComplexity int, id *string, skip *int, limit *int) int
+		TagValue func(childComplexity int, id *string, skip *int, limit *int) int
 	}
 
 	SearchResult struct {
@@ -96,9 +96,9 @@ type MutationResolver interface {
 	DeleteTagValue(ctx context.Context, input model.DeleteTagValue) (*model.TagValue, error)
 }
 type QueryResolver interface {
-	Tags(ctx context.Context, id *string, skip *int, limit *int) ([]*model.Tag, error)
-	Assets(ctx context.Context, id *string, skip *int, limit *int) ([]*model.Asset, error)
-	TagValues(ctx context.Context, id *string, skip *int, limit *int) ([]*model.TagValue, error)
+	Tag(ctx context.Context, id *string, skip *int, limit *int) ([]*model.Tag, error)
+	Asset(ctx context.Context, id *string, skip *int, limit *int) ([]*model.Asset, error)
+	TagValue(ctx context.Context, id *string, skip *int, limit *int) ([]*model.TagValue, error)
 	Search(ctx context.Context, input model.Search, skip *int, limit *int) (*model.SearchResult, error)
 }
 
@@ -202,17 +202,17 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.UpdateTagValue(childComplexity, args["input"].(model.UpdateTagValue)), true
 
-	case "Query.assets":
-		if e.complexity.Query.Assets == nil {
+	case "Query.asset":
+		if e.complexity.Query.Asset == nil {
 			break
 		}
 
-		args, err := ec.field_Query_assets_args(context.TODO(), rawArgs)
+		args, err := ec.field_Query_asset_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Query.Assets(childComplexity, args["id"].(*string), args["skip"].(*int), args["limit"].(*int)), true
+		return e.complexity.Query.Asset(childComplexity, args["id"].(*string), args["skip"].(*int), args["limit"].(*int)), true
 
 	case "Query.search":
 		if e.complexity.Query.Search == nil {
@@ -226,29 +226,29 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.Search(childComplexity, args["input"].(model.Search), args["skip"].(*int), args["limit"].(*int)), true
 
-	case "Query.tagValues":
-		if e.complexity.Query.TagValues == nil {
+	case "Query.tag":
+		if e.complexity.Query.Tag == nil {
 			break
 		}
 
-		args, err := ec.field_Query_tagValues_args(context.TODO(), rawArgs)
+		args, err := ec.field_Query_tag_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Query.TagValues(childComplexity, args["id"].(*string), args["skip"].(*int), args["limit"].(*int)), true
+		return e.complexity.Query.Tag(childComplexity, args["id"].(*string), args["skip"].(*int), args["limit"].(*int)), true
 
-	case "Query.tags":
-		if e.complexity.Query.Tags == nil {
+	case "Query.tagValue":
+		if e.complexity.Query.TagValue == nil {
 			break
 		}
 
-		args, err := ec.field_Query_tags_args(context.TODO(), rawArgs)
+		args, err := ec.field_Query_tagValue_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Query.Tags(childComplexity, args["id"].(*string), args["skip"].(*int), args["limit"].(*int)), true
+		return e.complexity.Query.TagValue(childComplexity, args["id"].(*string), args["skip"].(*int), args["limit"].(*int)), true
 
 	case "SearchResult.assets":
 		if e.complexity.SearchResult.Assets == nil {
@@ -538,7 +538,7 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 	return args, nil
 }
 
-func (ec *executionContext) field_Query_assets_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Query_asset_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 *string
@@ -604,7 +604,7 @@ func (ec *executionContext) field_Query_search_args(ctx context.Context, rawArgs
 	return args, nil
 }
 
-func (ec *executionContext) field_Query_tagValues_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Query_tagValue_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 *string
@@ -637,7 +637,7 @@ func (ec *executionContext) field_Query_tagValues_args(ctx context.Context, rawA
 	return args, nil
 }
 
-func (ec *executionContext) field_Query_tags_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Query_tag_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 *string
@@ -1171,8 +1171,8 @@ func (ec *executionContext) fieldContext_Mutation_deleteTagValue(ctx context.Con
 	return fc, nil
 }
 
-func (ec *executionContext) _Query_tags(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_tags(ctx, field)
+func (ec *executionContext) _Query_tag(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_tag(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1185,7 +1185,7 @@ func (ec *executionContext) _Query_tags(ctx context.Context, field graphql.Colle
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Tags(rctx, fc.Args["id"].(*string), fc.Args["skip"].(*int), fc.Args["limit"].(*int))
+		return ec.resolvers.Query().Tag(rctx, fc.Args["id"].(*string), fc.Args["skip"].(*int), fc.Args["limit"].(*int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1202,7 +1202,7 @@ func (ec *executionContext) _Query_tags(ctx context.Context, field graphql.Colle
 	return ec.marshalNTag2ᚕᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐTagᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Query_tags(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Query_tag(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Query",
 		Field:      field,
@@ -1227,15 +1227,15 @@ func (ec *executionContext) fieldContext_Query_tags(ctx context.Context, field g
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_tags_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Query_tag_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
 	return fc, nil
 }
 
-func (ec *executionContext) _Query_assets(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_assets(ctx, field)
+func (ec *executionContext) _Query_asset(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_asset(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1248,7 +1248,7 @@ func (ec *executionContext) _Query_assets(ctx context.Context, field graphql.Col
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Assets(rctx, fc.Args["id"].(*string), fc.Args["skip"].(*int), fc.Args["limit"].(*int))
+		return ec.resolvers.Query().Asset(rctx, fc.Args["id"].(*string), fc.Args["skip"].(*int), fc.Args["limit"].(*int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1265,7 +1265,7 @@ func (ec *executionContext) _Query_assets(ctx context.Context, field graphql.Col
 	return ec.marshalNAsset2ᚕᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐAssetᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Query_assets(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Query_asset(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Query",
 		Field:      field,
@@ -1290,15 +1290,15 @@ func (ec *executionContext) fieldContext_Query_assets(ctx context.Context, field
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_assets_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Query_asset_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
 	return fc, nil
 }
 
-func (ec *executionContext) _Query_tagValues(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_tagValues(ctx, field)
+func (ec *executionContext) _Query_tagValue(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_tagValue(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1311,7 +1311,7 @@ func (ec *executionContext) _Query_tagValues(ctx context.Context, field graphql.
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().TagValues(rctx, fc.Args["id"].(*string), fc.Args["skip"].(*int), fc.Args["limit"].(*int))
+		return ec.resolvers.Query().TagValue(rctx, fc.Args["id"].(*string), fc.Args["skip"].(*int), fc.Args["limit"].(*int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1328,7 +1328,7 @@ func (ec *executionContext) _Query_tagValues(ctx context.Context, field graphql.
 	return ec.marshalNTagValue2ᚕᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐTagValueᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Query_tagValues(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Query_tagValue(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Query",
 		Field:      field,
@@ -1355,7 +1355,7 @@ func (ec *executionContext) fieldContext_Query_tagValues(ctx context.Context, fi
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_tagValues_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Query_tagValue_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -4130,7 +4130,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Query")
-		case "tags":
+		case "tag":
 			field := field
 
 			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
@@ -4139,7 +4139,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Query_tags(ctx, field)
+				res = ec._Query_tag(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -4152,7 +4152,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "assets":
+		case "asset":
 			field := field
 
 			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
@@ -4161,7 +4161,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Query_assets(ctx, field)
+				res = ec._Query_asset(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -4174,7 +4174,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "tagValues":
+		case "tagValue":
 			field := field
 
 			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
@@ -4183,7 +4183,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Query_tagValues(ctx, field)
+				res = ec._Query_tagValue(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}

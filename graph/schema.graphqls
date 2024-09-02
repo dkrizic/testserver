@@ -28,9 +28,9 @@ type SearchResult {
 }
 
 type Query {
-  tags(id:ID, skip: Int = 0, limit: Int = 10): [Tag!]!
-  assets(id:ID, skip: Int = 0, limit: Int = 10): [Asset!]!
-  tagValues(id:ID, skip: Int = 0, limit: Int = 10): [TagValue!]!
+  tag(id:ID, skip: Int = 0, limit: Int = 10): [Tag!]!
+  asset(id:ID, skip: Int = 0, limit: Int = 10): [Asset!]!
+  tagValue(id:ID, skip: Int = 0, limit: Int = 10): [TagValue!]!
   search(input: Search!, skip: Int = 0, limit: Int = 10): SearchResult!
 }
 
