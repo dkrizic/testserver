@@ -53,7 +53,8 @@ func main() {
 		service.DatabasePort(fmt.Sprintf("%d", c.Service().DatabasePort())),
 		service.DatabaseUsername(c.Service().DatabaseUser()),
 		service.DatabasePassword(c.Service().DatabasePassword()),
-		service.DatabaseName(c.Service().DatabaseHost()))
+		service.DatabaseName(c.Service().DatabaseHost()),
+		service.CheckToken(c.CheckToken()))
 	if err != nil {
 		slog.Error("Failed to create service", "error", err)
 		return
