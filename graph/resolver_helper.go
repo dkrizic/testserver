@@ -8,13 +8,18 @@ import (
 	"github.com/dkrizic/testserver/telemetry"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 	"log/slog"
 )
 
 func (r *queryResolver) searchAssetName(ctx context.Context, text string, skip int, limit int) ([]*model.Asset, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "searchAssetName")
+	ctx, span := telemetry.Tracer().Start(ctx, "searchAssetName", trace.WithSpanKind(trace.SpanKindClient))
 	defer span.End()
-	span.SetAttributes(attribute.String("text", text))
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("text", text),
+		attribute.Int("skip", skip),
+		attribute.Int("limit", limit))
 
 	slog.InfoContext(ctx, "searchAssetName", "text", text, "skip", skip, "limit", limit)
 	query := "SELECT id,name FROM asset WHERE name LIKE ? LIMIT ?,?"
@@ -47,8 +52,13 @@ func (r *queryResolver) searchAssetName(ctx context.Context, text string, skip i
 }
 
 func (r *queryResolver) searchTagName(ctx context.Context, text string, skip int, limit int) ([]*model.Tag, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "searchTagName")
+	ctx, span := telemetry.Tracer().Start(ctx, "searchTagName", trace.WithSpanKind(trace.SpanKindClient))
 	defer span.End()
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("text", text),
+		attribute.Int("skip", skip),
+		attribute.Int("limit", limit))
 	slog.DebugContext(ctx, "searchTagName", "text", text, "skip", skip, "limit", limit)
 
 	query := "SELECT id,name FROM tag WHERE name LIKE ? LIMIT ?,?"
@@ -79,12 +89,17 @@ func (r *queryResolver) searchTagName(ctx context.Context, text string, skip int
 }
 
 func (r *queryResolver) searchTagValue(ctx context.Context, text string, skip int, limit int) ([]*model.TagValue, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "searchTagValue")
+	ctx, span := telemetry.Tracer().Start(ctx, "searchTagValue", trace.WithSpanKind(trace.SpanKindClient))
 	defer span.End()
-	span.SetAttributes(attribute.String("text", text))
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("text", text),
+		attribute.Int("skip", skip),
+		attribute.Int("limit", limit))
 
 	slog.DebugContext(ctx, "searchTagValue", "text", text, "skip", skip, "limit", limit)
 	query := "SELECT id,tag_id,asset_id,value FROM tagvalue WHERE value LIKE ? LIMIT ?,?"
+	span.SetAttributes(attribute.String("db.query.text", query))
 	wildcard := fmt.Sprintf("%%%s%%", text)
 	result, err := r.dB.Query(query, wildcard, skip, limit)
 	if err != nil {

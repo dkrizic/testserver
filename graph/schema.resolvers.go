@@ -173,6 +173,11 @@ func (r *queryResolver) Tag(ctx context.Context, id *string, skip *int, limit *i
 // Asset is the resolver for the asset field.
 func (r *queryResolver) Asset(ctx context.Context, id *string, skip *int, limit *int) ([]*model.Asset, error) {
 	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("db.operation.name", "select"),
+		attribute.Int("skip", *skip),
+		attribute.Int("limit", *limit))
 	if id != nil {
 		span.SetAttributes(attribute.String("id", *id))
 	}
@@ -221,6 +226,11 @@ func (r *queryResolver) Asset(ctx context.Context, id *string, skip *int, limit 
 // TagValue is the resolver for the tagValue field.
 func (r *queryResolver) TagValue(ctx context.Context, id *string, skip *int, limit *int) ([]*model.TagValue, error) {
 	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("db.operation.name", "select"),
+		attribute.Int("skip", *skip),
+		attribute.Int("limit", *limit))
 	if id != nil {
 		span.SetAttributes(attribute.String("id", *id))
 	}
@@ -276,7 +286,9 @@ func (r *queryResolver) Search(ctx context.Context, input model.Search, skip *in
 		attribute.String("query", input.Text),
 		attribute.Bool("searchAssetName", input.SearchAssetName),
 		attribute.Bool("searchTagName", input.SearchTagName),
-		attribute.Bool("searchTagValue", input.SearchTagValue))
+		attribute.Bool("searchTagValue", input.SearchTagValue),
+		attribute.Int("skip", *skip),
+		attribute.Int("limit", *limit))
 
 	slog.Info("Search",
 		"text", input.Text,
@@ -319,6 +331,9 @@ func (r *tagResolver) Assets(ctx context.Context, obj *model.Tag) ([]*model.Asse
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(attribute.String("id", obj.ID))
 	slog.DebugContext(ctx, "Assets(byTag)", "id", obj.ID)
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("db.operation.name", "select"))
 
 	query := "SELECT DISTINCT asset.id,asset.name FROM asset,tagvalue WHERE asset.id = tagvalue.asset_id and tagvalue.tag_id = ?"
 	span.SetAttributes(
@@ -351,7 +366,10 @@ func (r *tagResolver) Assets(ctx context.Context, obj *model.Tag) ([]*model.Asse
 // Tag is the resolver for the tag field.
 func (r *tagValueResolver) Tag(ctx context.Context, obj *model.TagValue) (*model.Tag, error) {
 	span := trace.SpanFromContext(ctx)
-	span.SetAttributes(attribute.String("id", obj.ID))
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("db.operation.name", "select"),
+		attribute.String("id", obj.ID))
 	slog.DebugContext(ctx, "Tag(byTagValue)", "id", obj.ID)
 
 	query := "SELECT tag.id,tag.name FROM tag,tagvalue where tagvalue.tag_id = tag.id and tagvalue.id = ?"
@@ -384,6 +402,9 @@ func (r *tagValueResolver) Asset(ctx context.Context, obj *model.TagValue) (*mod
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(attribute.String("id", obj.ID))
 	slog.DebugContext(ctx, "Asset(byTagValue)", "id", obj.ID)
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("db.operation.name", "select"))
 
 	query := "SELECT asset.id,asset.name FROM asset,tagvalue where tagvalue.asset_id = asset.id and tagvalue.id = ?"
 	span.SetAttributes(
