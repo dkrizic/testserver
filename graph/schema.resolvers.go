@@ -327,19 +327,22 @@ func (r *queryResolver) Search(ctx context.Context, input model.Search, skip *in
 }
 
 // Assets is the resolver for the assets field.
-func (r *tagResolver) Assets(ctx context.Context, obj *model.Tag) ([]*model.Asset, error) {
+func (r *tagResolver) Assets(ctx context.Context, obj *model.Tag, skip *int, limit *int) ([]*model.Asset, error) {
 	span := trace.SpanFromContext(ctx)
-	span.SetAttributes(attribute.String("id", obj.ID))
-	slog.DebugContext(ctx, "Assets(byTag)", "id", obj.ID)
+	span.SetAttributes(
+		attribute.String("id", obj.ID),
+		attribute.Int("limit", *limit),
+		attribute.Int("skip", *skip))
+	slog.DebugContext(ctx, "Assets(byTag)", "id", obj.ID, "skip", skip, "limit", limit)
 	span.SetAttributes(
 		attribute.String("db.system", "mysql"),
 		attribute.String("db.operation.name", "select"))
 
-	query := "SELECT DISTINCT asset.id,asset.name FROM asset,tagvalue WHERE asset.id = tagvalue.asset_id and tagvalue.tag_id = ?"
+	query := "SELECT DISTINCT asset.id,asset.name FROM asset,tagvalue WHERE asset.id = tagvalue.asset_id and tagvalue.tag_id = ? limit ?,?"
 	span.SetAttributes(
 		attribute.String("db.query.text", query),
 		attribute.String("db.parameter.id", obj.ID))
-	result, err := r.dB.Query(query, obj.ID)
+	result, err := r.dB.Query(query, obj.ID, skip, limit)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())

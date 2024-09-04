@@ -78,7 +78,7 @@ type ComplexityRoot struct {
 	}
 
 	Tag struct {
-		Assets func(childComplexity int) int
+		Assets func(childComplexity int, skip *int, limit *int) int
 		ID     func(childComplexity int) int
 		Name   func(childComplexity int) int
 	}
@@ -108,7 +108,7 @@ type QueryResolver interface {
 	Search(ctx context.Context, input model.Search, skip *int, limit *int) (*model.SearchResult, error)
 }
 type TagResolver interface {
-	Assets(ctx context.Context, obj *model.Tag) ([]*model.Asset, error)
+	Assets(ctx context.Context, obj *model.Tag, skip *int, limit *int) ([]*model.Asset, error)
 }
 type TagValueResolver interface {
 	Tag(ctx context.Context, obj *model.TagValue) (*model.Tag, error)
@@ -289,7 +289,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		return e.complexity.Tag.Assets(childComplexity), true
+		args, err := ec.field_Tag_assets_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Tag.Assets(childComplexity, args["skip"].(*int), args["limit"].(*int)), true
 
 	case "Tag.id":
 		if e.complexity.Tag.ID == nil {
@@ -680,6 +685,30 @@ func (ec *executionContext) field_Query_tag_args(ctx context.Context, rawArgs ma
 		}
 	}
 	args["limit"] = arg2
+	return args, nil
+}
+
+func (ec *executionContext) field_Tag_assets_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *int
+	if tmp, ok := rawArgs["skip"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("skip"))
+		arg0, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["skip"] = arg0
+	var arg1 *int
+	if tmp, ok := rawArgs["limit"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limit"))
+		arg1, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["limit"] = arg1
 	return args, nil
 }
 
@@ -1827,7 +1856,7 @@ func (ec *executionContext) _Tag_assets(ctx context.Context, field graphql.Colle
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Tag().Assets(rctx, obj)
+		return ec.resolvers.Tag().Assets(rctx, obj, fc.Args["skip"].(*int), fc.Args["limit"].(*int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1844,7 +1873,7 @@ func (ec *executionContext) _Tag_assets(ctx context.Context, field graphql.Colle
 	return ec.marshalNAsset2ᚕᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐAssetᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Tag_assets(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Tag_assets(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Tag",
 		Field:      field,
@@ -1861,6 +1890,17 @@ func (ec *executionContext) fieldContext_Tag_assets(_ context.Context, field gra
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Asset", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Tag_assets_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }

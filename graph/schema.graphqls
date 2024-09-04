@@ -5,7 +5,7 @@
 type Tag {
   id: String!
   name: String!
-  assets: [Asset!]!
+  assets(skip:Int = 0,limit:Int = 20): [Asset!]!
 }
 
 type Asset {
