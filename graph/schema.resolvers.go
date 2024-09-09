@@ -204,7 +204,7 @@ func (r *mutationResolver) RemoveUserFromGroup(ctx context.Context, userID strin
 	}
 
 	slog.Debug("Loading group", "id", groupID)
-	result, err := r.dB.Query("SELECT id,name FROM group WHERE id = ?", groupID)
+	result, err := r.dB.Query("SELECT id,name FROM xgroup WHERE id = ?", groupID)
 	if err != nil {
 		return nil, err
 	}
@@ -543,8 +543,6 @@ func (r *tagResolver) Assets(ctx context.Context, obj *model.Tag, skip *int, lim
 		var asset model.Asset
 		err := result.Scan(&asset.ID, &asset.Name)
 		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
 			return nil, err
 		}
 		assets = append(assets, &asset)
@@ -569,8 +567,6 @@ func (r *tagValueResolver) Tag(ctx context.Context, obj *model.TagValue) (*model
 		attribute.String("db.parameter.id", obj.ID))
 	result, err := r.dB.Query(query, obj.ID)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
 		return nil, err
 	}
 	defer result.Close()
@@ -579,8 +575,6 @@ func (r *tagValueResolver) Tag(ctx context.Context, obj *model.TagValue) (*model
 	for result.Next() {
 		err := result.Scan(&tag.ID, &tag.Name)
 		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
 			return nil, err
 		}
 	}
@@ -603,8 +597,6 @@ func (r *tagValueResolver) Asset(ctx context.Context, obj *model.TagValue) (*mod
 		attribute.String("db.parameter.id", obj.ID))
 	result, err := r.dB.Query(query, obj.ID)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
 		return nil, err
 	}
 	defer result.Close()
@@ -613,8 +605,6 @@ func (r *tagValueResolver) Asset(ctx context.Context, obj *model.TagValue) (*mod
 	for result.Next() {
 		err := result.Scan(&asset.ID, &asset.Name)
 		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
 			return nil, err
 		}
 	}
