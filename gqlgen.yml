@@ -100,3 +100,11 @@ models:
         resolver: true
       asset:
         resolver: true
+  User:
+    fields:
+      groups:
+        resolver: true
+  Group:
+    fields:
+      users:
+        resolver: true

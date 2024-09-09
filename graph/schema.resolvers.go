@@ -55,6 +55,38 @@ func (r *assetResolver) TagValues(ctx context.Context, obj *model.Asset) ([]*mod
 	return tagValues, nil
 }
 
+// Users is the resolver for the users field.
+func (r *groupResolver) Users(ctx context.Context, obj *model.Group, skip *int, limit *int) ([]*model.User, error) {
+	slog.Info("Users(forGroup)", "id", obj.ID, "skip", skip, "limit", limit)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("db.operation.name", "select"),
+		attribute.Int("skip", *skip),
+		attribute.Int("limit", *limit))
+	span.SetAttributes(attribute.String("id", obj.ID))
+	query := "SELECT user.id,user.email FROM user,user_group where user_group.user_id = user.id and user_group.group_id = ? limit ?,?"
+	span.SetAttributes(
+		attribute.String("db.query.text", query),
+		attribute.String("db.parameter.id", obj.ID))
+	result, err := r.dB.Query(query, obj.ID, skip, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	users := []*model.User{}
+	for result.Next() {
+		var user model.User
+		err := result.Scan(&user.ID, &user.Email)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, &user)
+	}
+	return users, nil
+}
+
 // CreateTag is the resolver for the createTag field.
 func (r *mutationResolver) CreateTag(ctx context.Context, tagName string) (*model.Tag, error) {
 	slog.Info("Create tag", "name", tagName)
@@ -121,6 +153,84 @@ func (r *mutationResolver) DeleteTagValue(ctx context.Context, input model.Delet
 	return &model.TagValue{ID: fmt.Sprintf("%d", id)}, nil
 }
 
+// AddGroup is the resolver for the addGroup field.
+func (r *mutationResolver) AddGroup(ctx context.Context, name string) (*model.Group, error) {
+	slog.Info("Add group", "name", name)
+	result, err := r.dB.Exec("INSERT INTO group (name) VALUES (?)", name)
+	if err != nil {
+		return nil, err
+	}
+	id, err := result.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
+	return &model.Group{ID: fmt.Sprintf("%d", id), Name: name}, nil
+}
+
+// AddUser is the resolver for the addUser field.
+func (r *mutationResolver) AddUser(ctx context.Context, email string) (*model.User, error) {
+	slog.Info("Add user", "email", email)
+	result, err := r.dB.Exec("INSERT INTO user (email) VALUES (?)", email)
+	if err != nil {
+		return nil, err
+	}
+	id, err := result.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
+	return &model.User{ID: fmt.Sprintf("%d", id), Email: email}, nil
+}
+
+// AddUsertoGroup is the resolver for the addUsertoGroup field.
+func (r *mutationResolver) AddUsertoGroup(ctx context.Context, userID string, groupID string) (*model.Group, error) {
+	slog.Info("Add user to group", "userID", userID, "groupID", groupID)
+	result, err := r.dB.Exec("INSERT INTO user_group (user_id,group_id) VALUES (?,?)", userID, groupID)
+	if err != nil {
+		return nil, err
+	}
+	id, err := result.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
+	return &model.Group{ID: fmt.Sprintf("%d", id)}, nil
+}
+
+// RemoveUserFromGroup is the resolver for the removeUserFromGroup field.
+func (r *mutationResolver) RemoveUserFromGroup(ctx context.Context, userID string, groupID string) (*model.Group, error) {
+	slog.Info("Remove user from group", "userID", userID, "groupID", groupID)
+	_, err := r.dB.Exec("DELETE FROM user_group WHERE user_id = ? AND group_id = ?", userID, groupID)
+	if err != nil {
+		return nil, err
+	}
+
+	slog.Debug("Loading group", "id", groupID)
+	result, err := r.dB.Query("SELECT id,name FROM group WHERE id = ?", groupID)
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	var group model.Group
+	for result.Next() {
+		err := result.Scan(&group.ID, &group.Name)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &group, nil
+}
+
+// AssignPermission is the resolver for the assignPermission field.
+func (r *mutationResolver) AssignPermission(ctx context.Context, identityID string, assetID string, permission model.Permission) (*model.Assignment, error) {
+	panic(fmt.Errorf("not implemented: AssignPermission - assignPermission"))
+}
+
+// RemovePermission is the resolver for the removePermission field.
+func (r *mutationResolver) RemovePermission(ctx context.Context, identityID string, assetID string) (*model.Assignment, error) {
+	panic(fmt.Errorf("not implemented: RemovePermission - removePermission"))
+}
+
 // Tag is the resolver for the tag field.
 func (r *queryResolver) Tag(ctx context.Context, id *string, skip *int, limit *int) ([]*model.Tag, error) {
 	span := trace.SpanFromContext(ctx)
@@ -148,8 +258,6 @@ func (r *queryResolver) Tag(ctx context.Context, id *string, skip *int, limit *i
 	}
 	if err != nil {
 		slog.WarnContext(ctx, "Error querying database", "error", err)
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
 		return nil, err
 	}
 	defer result.Close()
@@ -159,8 +267,6 @@ func (r *queryResolver) Tag(ctx context.Context, id *string, skip *int, limit *i
 		var tag model.Tag
 		err := result.Scan(&tag.ID, &tag.Name)
 		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
 			return nil, err
 		}
 		tags = append(tags, &tag)
@@ -191,8 +297,6 @@ func (r *queryResolver) Asset(ctx context.Context, id *string, skip *int, limit 
 			attribute.String("db.query.parameter.id", *id))
 		result, err = r.dB.Query(query, *id)
 		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
 			return nil, err
 		}
 	} else {
@@ -200,8 +304,6 @@ func (r *queryResolver) Asset(ctx context.Context, id *string, skip *int, limit 
 		span.SetAttributes(attribute.String("db.query.text", query))
 		result, err = r.dB.Query(query, skip, limit)
 		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
 			return nil, err
 		}
 	}
@@ -212,8 +314,6 @@ func (r *queryResolver) Asset(ctx context.Context, id *string, skip *int, limit 
 		var asset model.Asset
 		err := result.Scan(&asset.ID, &asset.Name)
 		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
 			return nil, err
 		}
 		assets = append(assets, &asset)
@@ -326,6 +426,96 @@ func (r *queryResolver) Search(ctx context.Context, input model.Search, skip *in
 	return searchResult, nil
 }
 
+// User is the resolver for the user field.
+func (r *queryResolver) User(ctx context.Context, id *string, skip *int, limit *int) ([]*model.User, error) {
+	slog.Info("User", "id", id, "skip", skip, "limit", limit)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("db.operation.name", "select"),
+		attribute.Int("skip", *skip),
+		attribute.Int("limit", *limit))
+	if id != nil {
+		span.SetAttributes(attribute.String("id", *id))
+	}
+	var result *sql.Rows
+	var err error
+	if id != nil {
+		query := "SELECT id,email FROM user WHERE id = ?"
+		span.SetAttributes(
+			attribute.String("db.query.text", query),
+			attribute.String("db.query.parameter.id", *id))
+		result, err = r.dB.Query(query, *id)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		query := "SELECT id,email FROM user LIMIT ?,?"
+		span.SetAttributes(attribute.String("db.query.text", query))
+		result, err = r.dB.Query(query, *skip, *limit)
+		if err != nil {
+			return nil, err
+		}
+	}
+	defer result.Close()
+
+	users := []*model.User{}
+	for result.Next() {
+		var user model.User
+		err := result.Scan(&user.ID, &user.Email)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, &user)
+	}
+	return users, nil
+}
+
+// Group is the resolver for the group field.
+func (r *queryResolver) Group(ctx context.Context, id *string, skip *int, limit *int) ([]*model.Group, error) {
+	slog.Info("Group", "id", id, "skip", skip, "limit", limit)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("db.operation.name", "select"),
+		attribute.Int("skip", *skip),
+		attribute.Int("limit", *limit))
+	if id != nil {
+		span.SetAttributes(attribute.String("id", *id))
+	}
+	var result *sql.Rows
+	var err error
+	if id != nil {
+		query := "SELECT id,name FROM group WHERE id = ?"
+		span.SetAttributes(
+			attribute.String("db.query.text", query),
+			attribute.String("db.query.parameter.id", *id))
+		result, err = r.dB.Query(query, *id)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		query := "SELECT id,name FROM xgroup LIMIT ?,?"
+		span.SetAttributes(attribute.String("db.query.text", query))
+		result, err = r.dB.Query(query, *skip, *limit)
+		if err != nil {
+			return nil, err
+		}
+	}
+	defer result.Close()
+
+	groups := []*model.Group{}
+	for result.Next() {
+		var group model.Group
+		err := result.Scan(&group.ID, &group.Name)
+		if err != nil {
+			return nil, err
+		}
+		groups = append(groups, &group)
+	}
+	return groups, nil
+}
+
 // Assets is the resolver for the assets field.
 func (r *tagResolver) Assets(ctx context.Context, obj *model.Tag, skip *int, limit *int) ([]*model.Asset, error) {
 	span := trace.SpanFromContext(ctx)
@@ -344,8 +534,6 @@ func (r *tagResolver) Assets(ctx context.Context, obj *model.Tag, skip *int, lim
 		attribute.String("db.parameter.id", obj.ID))
 	result, err := r.dB.Query(query, obj.ID, skip, limit)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
 		return nil, err
 	}
 	defer result.Close()
@@ -434,8 +622,43 @@ func (r *tagValueResolver) Asset(ctx context.Context, obj *model.TagValue) (*mod
 	return &asset, nil
 }
 
+// Groups is the resolver for the groups field.
+func (r *userResolver) Groups(ctx context.Context, obj *model.User, skip *int, limit *int) ([]*model.Group, error) {
+	slog.Info("Groups(forUser)", "id", obj.ID, "skip", skip, "limit", limit)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("db.operation.name", "select"),
+		attribute.Int("skip", *skip),
+		attribute.Int("limit", *limit))
+	span.SetAttributes(attribute.String("id", obj.ID))
+	query := "SELECT xgroup.id,xgroup.name FROM xgroup,user_group where user_group.group_id = xgroup.id and user_group.user_id = ? limit ?,?"
+	span.SetAttributes(
+		attribute.String("db.query.text", query),
+		attribute.String("db.parameter.id", obj.ID))
+	result, err := r.dB.Query(query, obj.ID, skip, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	groups := []*model.Group{}
+	for result.Next() {
+		var group model.Group
+		err := result.Scan(&group.ID, &group.Name)
+		if err != nil {
+			return nil, err
+		}
+		groups = append(groups, &group)
+	}
+	return groups, nil
+}
+
 // Asset returns AssetResolver implementation.
 func (r *Resolver) Asset() AssetResolver { return &assetResolver{r} }
+
+// Group returns GroupResolver implementation.
+func (r *Resolver) Group() GroupResolver { return &groupResolver{r} }
 
 // Mutation returns MutationResolver implementation.
 func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
@@ -449,8 +672,13 @@ func (r *Resolver) Tag() TagResolver { return &tagResolver{r} }
 // TagValue returns TagValueResolver implementation.
 func (r *Resolver) TagValue() TagValueResolver { return &tagValueResolver{r} }
 
+// User returns UserResolver implementation.
+func (r *Resolver) User() UserResolver { return &userResolver{r} }
+
 type assetResolver struct{ *Resolver }
+type groupResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type tagResolver struct{ *Resolver }
 type tagValueResolver struct{ *Resolver }
+type userResolver struct{ *Resolver }

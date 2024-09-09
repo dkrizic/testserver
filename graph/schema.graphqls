@@ -2,6 +2,33 @@
 #
 # https://gqlgen.com/getting-started/
 
+# type Identity is either User or Group
+union Identity = User | Group
+
+type User {
+  id: String!
+  email: String!
+  groups(skip:Int = 0,limit:Int = 20): [Group!]
+}
+
+type Group {
+  id: String!
+  name: String!
+  users(skip:Int = 0,limit:Int = 20): [User!]
+}
+
+# enum for read and write permissions
+enum Permission {
+  READ
+  WRITE
+}
+
+type Assignment {
+  identity: Identity!
+  permission: Permission!
+  asset: Asset!
+}
+
 type Tag {
   id: String!
   name: String!
@@ -32,6 +59,8 @@ type Query {
   asset(id:ID, skip: Int = 0, limit: Int = 10): [Asset!]!
   tagValue(id:ID, skip: Int = 0, limit: Int = 10): [TagValue!]!
   search(input: Search!, skip: Int = 0, limit: Int = 10): SearchResult!
+  user(id:ID, skip: Int =0, limit: Int = 10): [User!]!
+  group(id:ID, skip: Int = 0, limit: Int = 10): [Group!]!
 }
 
 type TagValue {
@@ -62,4 +91,10 @@ type Mutation {
   createTagValue(input: NewTagValue!): TagValue!
   updateTagValue(input: UpdateTagValue!): TagValue!
   deleteTagValue(input: DeleteTagValue!): TagValue!
+  addGroup(name: String!): Group!
+  addUser(email: String!): User!
+  addUsertoGroup(userID: ID!, groupID: ID!): Group!
+  removeUserFromGroup(userID: ID!, groupID: ID!): Group!
+  assignPermission(identityID: ID!, assetID: ID!, permission: Permission!): Assignment!
+  removePermission(identityID: ID!, assetID: ID!): Assignment!
 }

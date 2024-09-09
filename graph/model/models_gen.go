@@ -2,15 +2,39 @@
 
 package model
 
+import (
+	"fmt"
+	"io"
+	"strconv"
+)
+
+type Identity interface {
+	IsIdentity()
+}
+
 type Asset struct {
 	ID        string      `json:"id"`
 	Name      string      `json:"name"`
 	TagValues []*TagValue `json:"tagValues"`
 }
 
+type Assignment struct {
+	Identity   Identity   `json:"identity"`
+	Permission Permission `json:"permission"`
+	Asset      *Asset     `json:"asset"`
+}
+
 type DeleteTagValue struct {
 	ID string `json:"id"`
 }
+
+type Group struct {
+	ID    string  `json:"id"`
+	Name  string  `json:"name"`
+	Users []*User `json:"users,omitempty"`
+}
+
+func (Group) IsIdentity() {}
 
 type Mutation struct {
 }
@@ -53,4 +77,53 @@ type TagValue struct {
 type UpdateTagValue struct {
 	ID    string `json:"id"`
 	Value string `json:"value"`
+}
+
+type User struct {
+	ID     string   `json:"id"`
+	Email  string   `json:"email"`
+	Groups []*Group `json:"groups,omitempty"`
+}
+
+func (User) IsIdentity() {}
+
+type Permission string
+
+const (
+	PermissionRead  Permission = "READ"
+	PermissionWrite Permission = "WRITE"
+)
+
+var AllPermission = []Permission{
+	PermissionRead,
+	PermissionWrite,
+}
+
+func (e Permission) IsValid() bool {
+	switch e {
+	case PermissionRead, PermissionWrite:
+		return true
+	}
+	return false
+}
+
+func (e Permission) String() string {
+	return string(e)
+}
+
+func (e *Permission) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = Permission(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid Permission", str)
+	}
+	return nil
+}
+
+func (e Permission) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
 }
