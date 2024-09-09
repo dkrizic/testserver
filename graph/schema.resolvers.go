@@ -156,7 +156,7 @@ func (r *mutationResolver) DeleteTagValue(ctx context.Context, input model.Delet
 // AddGroup is the resolver for the addGroup field.
 func (r *mutationResolver) AddGroup(ctx context.Context, name string) (*model.Group, error) {
 	slog.Info("Add group", "name", name)
-	result, err := r.dB.Exec("INSERT INTO group (name) VALUES (?)", name)
+	result, err := r.dB.Exec("INSERT INTO xgroup (name) VALUES (?)", name)
 	if err != nil {
 		return nil, err
 	}

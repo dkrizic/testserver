@@ -10,6 +10,7 @@ import (
 	"github.com/dkrizic/testserver/service/handler/token"
 	"github.com/dkrizic/testserver/service/version"
 	"github.com/ravilushqa/otelgqlgen"
+	"go.opentelemetry.io/otel/trace"
 	"log/slog"
 	"net/http"
 	"os"
@@ -123,7 +124,20 @@ func (s *Service) Run() error {
 	resolver := graph.NewResolver(graph.DB(db))
 	queryHandler := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{Resolvers: resolver}))
 	slog.Info("Binding query handler", "path", queryPath)
-	queryHandler.Use(otelgqlgen.Middleware())
+	queryHandler.Use(otelgqlgen.Middleware(otelgqlgen.WithSpanKindSelector(func(name string) trace.SpanKind {
+		switch name {
+		case ""
+		case "Query/group":
+			return trace.SpanKindClient
+		case "Query/user":
+			return trace.SpanKindClient
+		case "Group/users":
+			return trace.SpanKindClient
+		case "User/groups":
+			return trace.SpanKindClient
+		}
+		return trace.SpanKindInternal
+	})))
 	mux.Handle(queryPath, queryHandler)
 
 	slog.Info("Binding playground", "path", defaultPath)
