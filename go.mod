@@ -7,7 +7,7 @@ require (
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/pressly/goose/v3 v3.22.0
-	github.com/ravilushqa/otelgqlgen v0.16.0
+	github.com/ravilushqa/otelgqlgen v0.17.0
 	github.com/vektah/gqlparser/v2 v2.5.16
 	go.opentelemetry.io/otel v1.29.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.29.0

@@ -61,6 +61,8 @@ github.com/pressly/goose/v3 v3.22.0 h1:wd/7kNiPTuNAztWun7iaB98DrhulbWPrzMAaw2DEZ
 github.com/pressly/goose/v3 v3.22.0/go.mod h1:yJM3qwSj2pp7aAaCvso096sguezamNb2OBgxCnh/EYg=
 github.com/ravilushqa/otelgqlgen v0.16.0 h1:tEryUp/Kai5lccgA0Hl0lb/LUdJmqIJT31HwwxaYiUM=
 github.com/ravilushqa/otelgqlgen v0.16.0/go.mod h1:72/ZmqsGciNzAEYavQRKqhiRaZ4piW/Fjk4xLnG3SAg=
+github.com/ravilushqa/otelgqlgen v0.17.0 h1:bLwQfKqtj9P24QpjM2sc1ipBm5Fqv2u7DKN5LIpj3g8=
+github.com/ravilushqa/otelgqlgen v0.17.0/go.mod h1:orOIikuYsay1y3CmLgd5gsHcT9EsnXwNKmkAplzzYXQ=
 github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec h1:W09IVJc94icq4NjY3clb7Lk8O1qJ8BdBEF8z0ibU0rE=
 github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec/go.mod h1:qqbHyh8v60DhA7CoWK5oRCqLrMHRGoxYCSS9EjAz6Eo=
 github.com/rogpeppe/go-internal v1.12.0 h1:exVL4IDcn6na9z1rAb56Vxr+CgyK3nn3O+epU5NdKM8=
