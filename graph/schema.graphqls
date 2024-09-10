@@ -61,6 +61,7 @@ type Query {
   search(input: Search!, skip: Int = 0, limit: Int = 10): SearchResult!
   user(id:ID, skip: Int =0, limit: Int = 10): [User!]!
   group(id:ID, skip: Int = 0, limit: Int = 10): [Group!]!
+  identity(skip: Int = 0, limit: Int = 10): [Identity!]!
 }
 
 type TagValue {

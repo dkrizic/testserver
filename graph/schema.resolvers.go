@@ -498,6 +498,54 @@ func (r *queryResolver) Group(ctx context.Context, id *string, skip *int, limit 
 	return groups, nil
 }
 
+// Identity is the resolver for the identity field.
+func (r *queryResolver) Identity(ctx context.Context, skip *int, limit *int) ([]model.Identity, error) {
+	slog.InfoContext(ctx, "Identity", "skip", skip, "limit", limit)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("db.operation.name", "select"),
+		attribute.Int("skip", *skip),
+		attribute.Int("limit", *limit))
+	query := "SELECT id,email FROM user LIMIT ?,?"
+	span.SetAttributes(attribute.String("db.query.text", query))
+
+	result, err := r.dB.Query(query, *skip, *limit)
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	identities := []model.Identity{}
+	for result.Next() {
+		var user model.User
+		err := result.Scan(&user.ID, &user.Email)
+		if err != nil {
+			return nil, err
+		}
+		identities = append(identities, user)
+	}
+
+	query = "SELECT id,name FROM xgroup LIMIT ?,?"
+	span.SetAttributes(attribute.String("db.query.text", query))
+	result, err = r.dB.Query(query, *skip, *limit)
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	for result.Next() {
+		var group model.Group
+		err := result.Scan(&group.ID, &group.Name)
+		if err != nil {
+			return nil, err
+		}
+		identities = append(identities, group)
+	}
+
+	return identities, nil
+}
+
 // Assets is the resolver for the assets field.
 func (r *tagResolver) Assets(ctx context.Context, obj *model.Tag, skip *int, limit *int) ([]*model.Asset, error) {
 	span := trace.SpanFromContext(ctx)
