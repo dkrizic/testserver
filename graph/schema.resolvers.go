@@ -13,7 +13,6 @@ import (
 	"github.com/dkrizic/testserver/database"
 	"github.com/dkrizic/testserver/graph/model"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -29,8 +28,6 @@ func (r *assetResolver) TagValues(ctx context.Context, obj *model.Asset) ([]*mod
 		attribute.String("db.parameter.id", obj.ID))
 	result, err := r.dB.Query(query, obj.ID)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
 		return nil, err
 	}
 	defer result.Close()
@@ -40,8 +37,6 @@ func (r *assetResolver) TagValues(ctx context.Context, obj *model.Asset) ([]*mod
 		tagValueTemp := &database.TagValue{}
 		err := result.Scan(&tagValueTemp.ID, &tagValueTemp.TagID, &tagValueTemp.AssetID, &tagValueTemp.Value)
 		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
 			return nil, err
 		}
 		var tagValue model.TagValue
@@ -51,7 +46,6 @@ func (r *assetResolver) TagValues(ctx context.Context, obj *model.Asset) ([]*mod
 	}
 
 	span.SetAttributes(attribute.Int("tagValues.count", len(tagValues)))
-	span.SetStatus(codes.Ok, "tagValuesByAssetId completed")
 	return tagValues, nil
 }
 
@@ -272,7 +266,6 @@ func (r *queryResolver) Tag(ctx context.Context, id *string, skip *int, limit *i
 		tags = append(tags, &tag)
 	}
 	span.SetAttributes(attribute.Int("tags.count", len(tags)))
-	span.SetStatus(codes.Ok, "Tags completed")
 	return tags, nil
 }
 
@@ -319,7 +312,6 @@ func (r *queryResolver) Asset(ctx context.Context, id *string, skip *int, limit 
 		assets = append(assets, &asset)
 	}
 	span.SetAttributes(attribute.Int("assets.count", len(assets)))
-	span.SetStatus(codes.Ok, "Assets completed")
 	return assets, nil
 }
 
@@ -344,8 +336,6 @@ func (r *queryResolver) TagValue(ctx context.Context, id *string, skip *int, lim
 			attribute.String("db.query.parameter.id", *id))
 		result, err = r.dB.Query(query, *id, *skip, *limit)
 		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
 			return nil, err
 		}
 	} else {
@@ -353,8 +343,6 @@ func (r *queryResolver) TagValue(ctx context.Context, id *string, skip *int, lim
 		span.SetAttributes(attribute.String("db.query.text", query))
 		result, err = r.dB.Query(query, *skip, *limit)
 		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
 			return nil, err
 		}
 	}
@@ -375,7 +363,6 @@ func (r *queryResolver) TagValue(ctx context.Context, id *string, skip *int, lim
 	}
 
 	span.SetAttributes(attribute.Int("tagValues.count", len(tagValues)))
-	span.SetStatus(codes.Ok, "TagValues completed")
 	return tagValues, nil
 }
 
@@ -399,8 +386,6 @@ func (r *queryResolver) Search(ctx context.Context, input model.Search, skip *in
 	if input.SearchAssetName {
 		assets, err := r.searchAssetName(ctx, input.Text, *skip, *limit)
 		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
 			return nil, err
 		}
 		searchResult.Asset = assets
@@ -415,14 +400,11 @@ func (r *queryResolver) Search(ctx context.Context, input model.Search, skip *in
 	if input.SearchTagValue {
 		tagValues, err := r.searchTagValue(ctx, input.Text, *skip, *limit)
 		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
 			return nil, err
 		}
 		searchResult.TagValue = tagValues
 	}
 
-	span.SetStatus(codes.Ok, "Search completed")
 	return searchResult, nil
 }
 
@@ -548,7 +530,6 @@ func (r *tagResolver) Assets(ctx context.Context, obj *model.Tag, skip *int, lim
 		assets = append(assets, &asset)
 	}
 	span.SetAttributes(attribute.Int("assets.count", len(assets)))
-	span.SetStatus(codes.Ok, "assetsByTagId completed")
 	return assets, nil
 }
 
@@ -578,7 +559,6 @@ func (r *tagValueResolver) Tag(ctx context.Context, obj *model.TagValue) (*model
 			return nil, err
 		}
 	}
-	span.SetStatus(codes.Ok, "tagById completed")
 	return &tag, nil
 }
 
@@ -608,7 +588,6 @@ func (r *tagValueResolver) Asset(ctx context.Context, obj *model.TagValue) (*mod
 			return nil, err
 		}
 	}
-	span.SetStatus(codes.Ok, "assetById completed")
 	return &asset, nil
 }
 

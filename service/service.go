@@ -124,9 +124,8 @@ func (s *Service) Run() error {
 	resolver := graph.NewResolver(graph.DB(db))
 	queryHandler := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{Resolvers: resolver}))
 	slog.Info("Binding query handler", "path", queryPath)
-	queryHandler.Use(otelgqlgen.Middleware(otelgqlgen.WithSpanKindSelector(func(name string) trace.SpanKind {
-		switch name {
-		case ""
+	queryHandler.Use(otelgqlgen.Middleware(otelgqlgen.WithSpanKindSelector(func(operationName string) trace.SpanKind {
+		switch operationName {
 		case "Query/group":
 			return trace.SpanKindClient
 		case "Query/user":
@@ -135,8 +134,17 @@ func (s *Service) Run() error {
 			return trace.SpanKindClient
 		case "User/groups":
 			return trace.SpanKindClient
+		case "Query/tag":
+			return trace.SpanKindClient
+		case "Query/tagValue":
+			return trace.SpanKindClient
+		case "Tag/assets":
+			return trace.SpanKindClient
+		case "TagValue/tag":
+			return trace.SpanKindClient
+		case "TagValue/asset":
 		}
-		return trace.SpanKindInternal
+		return trace.SpanKindServer
 	})))
 	mux.Handle(queryPath, queryHandler)
 
