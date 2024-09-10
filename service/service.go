@@ -157,8 +157,11 @@ func (s *Service) Run() error {
 		case "TagValue/tag":
 			return trace.SpanKindClient
 		case "TagValue/asset":
+			return trace.SpanKindClient
+		case "Query/identity":
+			return trace.SpanKindClient
 		}
-		return trace.SpanKindServer
+		return trace.SpanKindInternal
 	})))
 	mux.Handle(queryPath, queryHandler)
 
