@@ -3,7 +3,6 @@ package graph
 import (
 	"context"
 	"fmt"
-	"github.com/dkrizic/testserver/database"
 	"github.com/dkrizic/testserver/graph/model"
 	"github.com/dkrizic/testserver/telemetry"
 	"go.opentelemetry.io/otel/attribute"
@@ -86,45 +85,4 @@ func (r *queryResolver) searchTagName(ctx context.Context, text string, skip int
 	span.SetAttributes(attribute.Int("tags.count", len(tags)))
 	span.SetStatus(codes.Ok, "SearchTagName completed")
 	return tags, nil
-}
-
-func (r *queryResolver) searchTagValue(ctx context.Context, text string, skip int, limit int) ([]*model.TagValue, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "searchTagValue", trace.WithSpanKind(trace.SpanKindClient))
-	defer span.End()
-	span.SetAttributes(
-		attribute.String("db.system", "mysql"),
-		attribute.String("text", text),
-		attribute.Int("skip", skip),
-		attribute.Int("limit", limit))
-
-	slog.DebugContext(ctx, "searchTagValue", "text", text, "skip", skip, "limit", limit)
-	query := "SELECT id,tag_id,asset_id,value FROM tagvalue WHERE value LIKE ? LIMIT ?,?"
-	span.SetAttributes(attribute.String("db.query.text", query))
-	wildcard := fmt.Sprintf("%%%s%%", text)
-	result, err := r.dB.Query(query, wildcard, skip, limit)
-	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return nil, err
-	}
-	defer result.Close()
-
-	tagValues := []*model.TagValue{}
-	for result.Next() {
-		tagValueTemp := &database.TagValue{}
-		err := result.Scan(&tagValueTemp.ID, &tagValueTemp.TagID, &tagValueTemp.AssetID, &tagValueTemp.Value)
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
-			return nil, err
-		}
-		var tagValue model.TagValue
-		tagValue.ID = tagValueTemp.ID
-		tagValue.Value = tagValueTemp.Value
-
-		tagValues = append(tagValues, &tagValue)
-	}
-	span.SetAttributes(attribute.Int("tagValues.count", len(tagValues)))
-	span.SetStatus(codes.Ok, "SearchTagValue completed")
-	return tagValues, nil
 }

@@ -13,9 +13,8 @@ type Identity interface {
 }
 
 type Asset struct {
-	ID        string      `json:"id"`
-	Name      string      `json:"name"`
-	TagValues []*TagValue `json:"tagValues"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 type Assignment struct {
@@ -24,14 +23,11 @@ type Assignment struct {
 	Asset      *Asset     `json:"asset"`
 }
 
-type DeleteTagValue struct {
-	ID string `json:"id"`
-}
-
 type Group struct {
-	ID    string  `json:"id"`
-	Name  string  `json:"name"`
-	Users []*User `json:"users,omitempty"`
+	ID     string   `json:"id"`
+	Name   string   `json:"name"`
+	Users  []*User  `json:"users,omitempty"`
+	Assets []*Asset `json:"assets,omitempty"`
 }
 
 func (Group) IsIdentity() {}
@@ -39,26 +35,7 @@ func (Group) IsIdentity() {}
 type Mutation struct {
 }
 
-type NewTagValue struct {
-	TagID   string `json:"tagID"`
-	AssetID string `json:"assetID"`
-	Value   string `json:"value"`
-}
-
 type Query struct {
-}
-
-type Search struct {
-	Text            string `json:"text"`
-	SearchTagName   bool   `json:"searchTagName"`
-	SearchTagValue  bool   `json:"searchTagValue"`
-	SearchAssetName bool   `json:"searchAssetName"`
-}
-
-type SearchResult struct {
-	Tag      []*Tag      `json:"tag"`
-	Asset    []*Asset    `json:"asset"`
-	TagValue []*TagValue `json:"tagValue"`
 }
 
 type Tag struct {
@@ -67,22 +44,11 @@ type Tag struct {
 	Assets []*Asset `json:"assets"`
 }
 
-type TagValue struct {
-	ID    string `json:"id"`
-	Tag   *Tag   `json:"tag"`
-	Asset *Asset `json:"asset"`
-	Value string `json:"value"`
-}
-
-type UpdateTagValue struct {
-	ID    string `json:"id"`
-	Value string `json:"value"`
-}
-
 type User struct {
 	ID     string   `json:"id"`
 	Email  string   `json:"email"`
 	Groups []*Group `json:"groups,omitempty"`
+	Assets []*Asset `json:"assets,omitempty"`
 }
 
 func (User) IsIdentity() {}
@@ -125,5 +91,48 @@ func (e *Permission) UnmarshalGQL(v interface{}) error {
 }
 
 func (e Permission) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+type PermissionQuery string
+
+const (
+	PermissionQueryRead  PermissionQuery = "READ"
+	PermissionQueryWrite PermissionQuery = "WRITE"
+	PermissionQueryAll   PermissionQuery = "ALL"
+)
+
+var AllPermissionQuery = []PermissionQuery{
+	PermissionQueryRead,
+	PermissionQueryWrite,
+	PermissionQueryAll,
+}
+
+func (e PermissionQuery) IsValid() bool {
+	switch e {
+	case PermissionQueryRead, PermissionQueryWrite, PermissionQueryAll:
+		return true
+	}
+	return false
+}
+
+func (e PermissionQuery) String() string {
+	return string(e)
+}
+
+func (e *PermissionQuery) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = PermissionQuery(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid PermissionQuery", str)
+	}
+	return nil
+}
+
+func (e PermissionQuery) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }

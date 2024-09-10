@@ -39,12 +39,10 @@ type Config struct {
 }
 
 type ResolverRoot interface {
-	Asset() AssetResolver
 	Group() GroupResolver
 	Mutation() MutationResolver
 	Query() QueryResolver
 	Tag() TagResolver
-	TagValue() TagValueResolver
 	User() UserResolver
 }
 
@@ -53,9 +51,8 @@ type DirectiveRoot struct {
 
 type ComplexityRoot struct {
 	Asset struct {
-		ID        func(childComplexity int) int
-		Name      func(childComplexity int) int
-		TagValues func(childComplexity int) int
+		ID   func(childComplexity int) int
+		Name func(childComplexity int) int
 	}
 
 	Assignment struct {
@@ -65,9 +62,10 @@ type ComplexityRoot struct {
 	}
 
 	Group struct {
-		ID    func(childComplexity int) int
-		Name  func(childComplexity int) int
-		Users func(childComplexity int, skip *int, limit *int) int
+		Assets func(childComplexity int, skip *int, limit *int, permission model.PermissionQuery) int
+		ID     func(childComplexity int) int
+		Name   func(childComplexity int) int
+		Users  func(childComplexity int, skip *int, limit *int) int
 	}
 
 	Mutation struct {
@@ -77,27 +75,16 @@ type ComplexityRoot struct {
 		AssignPermission    func(childComplexity int, identityID string, assetID string, permission model.Permission) int
 		CreateAsset         func(childComplexity int, assetName string) int
 		CreateTag           func(childComplexity int, tagName string) int
-		CreateTagValue      func(childComplexity int, input model.NewTagValue) int
-		DeleteTagValue      func(childComplexity int, input model.DeleteTagValue) int
 		RemovePermission    func(childComplexity int, identityID string, assetID string) int
 		RemoveUserFromGroup func(childComplexity int, userID string, groupID string) int
-		UpdateTagValue      func(childComplexity int, input model.UpdateTagValue) int
 	}
 
 	Query struct {
 		Asset    func(childComplexity int, id *string, skip *int, limit *int) int
 		Group    func(childComplexity int, id *string, skip *int, limit *int) int
 		Identity func(childComplexity int, skip *int, limit *int) int
-		Search   func(childComplexity int, input model.Search, skip *int, limit *int) int
 		Tag      func(childComplexity int, id *string, skip *int, limit *int) int
-		TagValue func(childComplexity int, id *string, skip *int, limit *int) int
 		User     func(childComplexity int, id *string, skip *int, limit *int) int
-	}
-
-	SearchResult struct {
-		Asset    func(childComplexity int) int
-		Tag      func(childComplexity int) int
-		TagValue func(childComplexity int) int
 	}
 
 	Tag struct {
@@ -106,32 +93,20 @@ type ComplexityRoot struct {
 		Name   func(childComplexity int) int
 	}
 
-	TagValue struct {
-		Asset func(childComplexity int) int
-		ID    func(childComplexity int) int
-		Tag   func(childComplexity int) int
-		Value func(childComplexity int) int
-	}
-
 	User struct {
+		Assets func(childComplexity int, skip *int, limit *int, permission model.PermissionQuery) int
 		Email  func(childComplexity int) int
 		Groups func(childComplexity int, skip *int, limit *int) int
 		ID     func(childComplexity int) int
 	}
 }
 
-type AssetResolver interface {
-	TagValues(ctx context.Context, obj *model.Asset) ([]*model.TagValue, error)
-}
 type GroupResolver interface {
 	Users(ctx context.Context, obj *model.Group, skip *int, limit *int) ([]*model.User, error)
 }
 type MutationResolver interface {
 	CreateTag(ctx context.Context, tagName string) (*model.Tag, error)
 	CreateAsset(ctx context.Context, assetName string) (*model.Asset, error)
-	CreateTagValue(ctx context.Context, input model.NewTagValue) (*model.TagValue, error)
-	UpdateTagValue(ctx context.Context, input model.UpdateTagValue) (*model.TagValue, error)
-	DeleteTagValue(ctx context.Context, input model.DeleteTagValue) (*model.TagValue, error)
 	AddGroup(ctx context.Context, name string) (*model.Group, error)
 	AddUser(ctx context.Context, email string) (*model.User, error)
 	AddUsertoGroup(ctx context.Context, userID string, groupID string) (*model.Group, error)
@@ -142,18 +117,12 @@ type MutationResolver interface {
 type QueryResolver interface {
 	Tag(ctx context.Context, id *string, skip *int, limit *int) ([]*model.Tag, error)
 	Asset(ctx context.Context, id *string, skip *int, limit *int) ([]*model.Asset, error)
-	TagValue(ctx context.Context, id *string, skip *int, limit *int) ([]*model.TagValue, error)
-	Search(ctx context.Context, input model.Search, skip *int, limit *int) (*model.SearchResult, error)
 	User(ctx context.Context, id *string, skip *int, limit *int) ([]*model.User, error)
 	Group(ctx context.Context, id *string, skip *int, limit *int) ([]*model.Group, error)
 	Identity(ctx context.Context, skip *int, limit *int) ([]model.Identity, error)
 }
 type TagResolver interface {
 	Assets(ctx context.Context, obj *model.Tag, skip *int, limit *int) ([]*model.Asset, error)
-}
-type TagValueResolver interface {
-	Tag(ctx context.Context, obj *model.TagValue) (*model.Tag, error)
-	Asset(ctx context.Context, obj *model.TagValue) (*model.Asset, error)
 }
 type UserResolver interface {
 	Groups(ctx context.Context, obj *model.User, skip *int, limit *int) ([]*model.Group, error)
@@ -192,13 +161,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Asset.Name(childComplexity), true
 
-	case "Asset.tagValues":
-		if e.complexity.Asset.TagValues == nil {
-			break
-		}
-
-		return e.complexity.Asset.TagValues(childComplexity), true
-
 	case "Assignment.asset":
 		if e.complexity.Assignment.Asset == nil {
 			break
@@ -219,6 +181,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Assignment.Permission(childComplexity), true
+
+	case "Group.assets":
+		if e.complexity.Group.Assets == nil {
+			break
+		}
+
+		args, err := ec.field_Group_assets_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Group.Assets(childComplexity, args["skip"].(*int), args["limit"].(*int), args["permission"].(model.PermissionQuery)), true
 
 	case "Group.id":
 		if e.complexity.Group.ID == nil {
@@ -318,30 +292,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.CreateTag(childComplexity, args["tagName"].(string)), true
 
-	case "Mutation.createTagValue":
-		if e.complexity.Mutation.CreateTagValue == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_createTagValue_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.CreateTagValue(childComplexity, args["input"].(model.NewTagValue)), true
-
-	case "Mutation.deleteTagValue":
-		if e.complexity.Mutation.DeleteTagValue == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_deleteTagValue_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.DeleteTagValue(childComplexity, args["input"].(model.DeleteTagValue)), true
-
 	case "Mutation.removePermission":
 		if e.complexity.Mutation.RemovePermission == nil {
 			break
@@ -365,18 +315,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.RemoveUserFromGroup(childComplexity, args["userID"].(string), args["groupID"].(string)), true
-
-	case "Mutation.updateTagValue":
-		if e.complexity.Mutation.UpdateTagValue == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_updateTagValue_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.UpdateTagValue(childComplexity, args["input"].(model.UpdateTagValue)), true
 
 	case "Query.asset":
 		if e.complexity.Query.Asset == nil {
@@ -414,18 +352,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.Identity(childComplexity, args["skip"].(*int), args["limit"].(*int)), true
 
-	case "Query.search":
-		if e.complexity.Query.Search == nil {
-			break
-		}
-
-		args, err := ec.field_Query_search_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Query.Search(childComplexity, args["input"].(model.Search), args["skip"].(*int), args["limit"].(*int)), true
-
 	case "Query.tag":
 		if e.complexity.Query.Tag == nil {
 			break
@@ -438,18 +364,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.Tag(childComplexity, args["id"].(*string), args["skip"].(*int), args["limit"].(*int)), true
 
-	case "Query.tagValue":
-		if e.complexity.Query.TagValue == nil {
-			break
-		}
-
-		args, err := ec.field_Query_tagValue_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Query.TagValue(childComplexity, args["id"].(*string), args["skip"].(*int), args["limit"].(*int)), true
-
 	case "Query.user":
 		if e.complexity.Query.User == nil {
 			break
@@ -461,27 +375,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.User(childComplexity, args["id"].(*string), args["skip"].(*int), args["limit"].(*int)), true
-
-	case "SearchResult.asset":
-		if e.complexity.SearchResult.Asset == nil {
-			break
-		}
-
-		return e.complexity.SearchResult.Asset(childComplexity), true
-
-	case "SearchResult.tag":
-		if e.complexity.SearchResult.Tag == nil {
-			break
-		}
-
-		return e.complexity.SearchResult.Tag(childComplexity), true
-
-	case "SearchResult.tagValue":
-		if e.complexity.SearchResult.TagValue == nil {
-			break
-		}
-
-		return e.complexity.SearchResult.TagValue(childComplexity), true
 
 	case "Tag.assets":
 		if e.complexity.Tag.Assets == nil {
@@ -509,33 +402,17 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Tag.Name(childComplexity), true
 
-	case "TagValue.asset":
-		if e.complexity.TagValue.Asset == nil {
+	case "User.assets":
+		if e.complexity.User.Assets == nil {
 			break
 		}
 
-		return e.complexity.TagValue.Asset(childComplexity), true
-
-	case "TagValue.id":
-		if e.complexity.TagValue.ID == nil {
-			break
+		args, err := ec.field_User_assets_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
 		}
 
-		return e.complexity.TagValue.ID(childComplexity), true
-
-	case "TagValue.tag":
-		if e.complexity.TagValue.Tag == nil {
-			break
-		}
-
-		return e.complexity.TagValue.Tag(childComplexity), true
-
-	case "TagValue.value":
-		if e.complexity.TagValue.Value == nil {
-			break
-		}
-
-		return e.complexity.TagValue.Value(childComplexity), true
+		return e.complexity.User.Assets(childComplexity, args["skip"].(*int), args["limit"].(*int), args["permission"].(model.PermissionQuery)), true
 
 	case "User.email":
 		if e.complexity.User.Email == nil {
@@ -570,12 +447,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	rc := graphql.GetOperationContext(ctx)
 	ec := executionContext{rc, e, 0, 0, make(chan graphql.DeferredResult)}
-	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
-		ec.unmarshalInputDeleteTagValue,
-		ec.unmarshalInputNewTagValue,
-		ec.unmarshalInputSearch,
-		ec.unmarshalInputUpdateTagValue,
-	)
+	inputUnmarshalMap := graphql.BuildUnmarshalerMap()
 	first := true
 
 	switch rc.Operation.Operation {
@@ -690,6 +562,39 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 // endregion ************************** generated!.gotpl **************************
 
 // region    ***************************** args.gotpl *****************************
+
+func (ec *executionContext) field_Group_assets_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *int
+	if tmp, ok := rawArgs["skip"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("skip"))
+		arg0, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["skip"] = arg0
+	var arg1 *int
+	if tmp, ok := rawArgs["limit"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limit"))
+		arg1, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["limit"] = arg1
+	var arg2 model.PermissionQuery
+	if tmp, ok := rawArgs["permission"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("permission"))
+		arg2, err = ec.unmarshalNPermissionQuery2githubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐPermissionQuery(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["permission"] = arg2
+	return args, nil
+}
 
 func (ec *executionContext) field_Group_users_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
@@ -817,21 +722,6 @@ func (ec *executionContext) field_Mutation_createAsset_args(ctx context.Context,
 	return args, nil
 }
 
-func (ec *executionContext) field_Mutation_createTagValue_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 model.NewTagValue
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNNewTagValue2githubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐNewTagValue(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["input"] = arg0
-	return args, nil
-}
-
 func (ec *executionContext) field_Mutation_createTag_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -844,21 +734,6 @@ func (ec *executionContext) field_Mutation_createTag_args(ctx context.Context, r
 		}
 	}
 	args["tagName"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_deleteTagValue_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 model.DeleteTagValue
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNDeleteTagValue2githubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐDeleteTagValue(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["input"] = arg0
 	return args, nil
 }
 
@@ -907,21 +782,6 @@ func (ec *executionContext) field_Mutation_removeUserFromGroup_args(ctx context.
 		}
 	}
 	args["groupID"] = arg1
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_updateTagValue_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 model.UpdateTagValue
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNUpdateTagValue2githubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐUpdateTagValue(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["input"] = arg0
 	return args, nil
 }
 
@@ -1030,72 +890,6 @@ func (ec *executionContext) field_Query_identity_args(ctx context.Context, rawAr
 	return args, nil
 }
 
-func (ec *executionContext) field_Query_search_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 model.Search
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNSearch2githubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐSearch(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["input"] = arg0
-	var arg1 *int
-	if tmp, ok := rawArgs["skip"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("skip"))
-		arg1, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["skip"] = arg1
-	var arg2 *int
-	if tmp, ok := rawArgs["limit"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limit"))
-		arg2, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["limit"] = arg2
-	return args, nil
-}
-
-func (ec *executionContext) field_Query_tagValue_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 *string
-	if tmp, ok := rawArgs["id"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-		arg0, err = ec.unmarshalOID2ᚖstring(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["id"] = arg0
-	var arg1 *int
-	if tmp, ok := rawArgs["skip"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("skip"))
-		arg1, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["skip"] = arg1
-	var arg2 *int
-	if tmp, ok := rawArgs["limit"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limit"))
-		arg2, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["limit"] = arg2
-	return args, nil
-}
-
 func (ec *executionContext) field_Query_tag_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -1183,6 +977,39 @@ func (ec *executionContext) field_Tag_assets_args(ctx context.Context, rawArgs m
 		}
 	}
 	args["limit"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_User_assets_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *int
+	if tmp, ok := rawArgs["skip"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("skip"))
+		arg0, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["skip"] = arg0
+	var arg1 *int
+	if tmp, ok := rawArgs["limit"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limit"))
+		arg1, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["limit"] = arg1
+	var arg2 model.PermissionQuery
+	if tmp, ok := rawArgs["permission"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("permission"))
+		arg2, err = ec.unmarshalNPermissionQuery2githubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐPermissionQuery(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["permission"] = arg2
 	return args, nil
 }
 
@@ -1336,60 +1163,6 @@ func (ec *executionContext) fieldContext_Asset_name(_ context.Context, field gra
 	return fc, nil
 }
 
-func (ec *executionContext) _Asset_tagValues(ctx context.Context, field graphql.CollectedField, obj *model.Asset) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Asset_tagValues(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Asset().TagValues(rctx, obj)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*model.TagValue)
-	fc.Result = res
-	return ec.marshalNTagValue2ᚕᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐTagValueᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Asset_tagValues(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Asset",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_TagValue_id(ctx, field)
-			case "tag":
-				return ec.fieldContext_TagValue_tag(ctx, field)
-			case "asset":
-				return ec.fieldContext_TagValue_asset(ctx, field)
-			case "value":
-				return ec.fieldContext_TagValue_value(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type TagValue", field.Name)
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Assignment_identity(ctx context.Context, field graphql.CollectedField, obj *model.Assignment) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Assignment_identity(ctx, field)
 	if err != nil {
@@ -1521,8 +1294,6 @@ func (ec *executionContext) fieldContext_Assignment_asset(_ context.Context, fie
 				return ec.fieldContext_Asset_id(ctx, field)
 			case "name":
 				return ec.fieldContext_Asset_name(ctx, field)
-			case "tagValues":
-				return ec.fieldContext_Asset_tagValues(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Asset", field.Name)
 		},
@@ -1660,6 +1431,8 @@ func (ec *executionContext) fieldContext_Group_users(ctx context.Context, field 
 				return ec.fieldContext_User_email(ctx, field)
 			case "groups":
 				return ec.fieldContext_User_groups(ctx, field)
+			case "assets":
+				return ec.fieldContext_User_assets(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
@@ -1672,6 +1445,64 @@ func (ec *executionContext) fieldContext_Group_users(ctx context.Context, field 
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Group_users_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Group_assets(ctx context.Context, field graphql.CollectedField, obj *model.Group) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Group_assets(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Assets, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Asset)
+	fc.Result = res
+	return ec.marshalOAsset2ᚕᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐAssetᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Group_assets(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Group",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Asset_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Asset_name(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Asset", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Group_assets_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -1784,8 +1615,6 @@ func (ec *executionContext) fieldContext_Mutation_createAsset(ctx context.Contex
 				return ec.fieldContext_Asset_id(ctx, field)
 			case "name":
 				return ec.fieldContext_Asset_name(ctx, field)
-			case "tagValues":
-				return ec.fieldContext_Asset_tagValues(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Asset", field.Name)
 		},
@@ -1798,201 +1627,6 @@ func (ec *executionContext) fieldContext_Mutation_createAsset(ctx context.Contex
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_createAsset_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_createTagValue(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_createTagValue(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateTagValue(rctx, fc.Args["input"].(model.NewTagValue))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.TagValue)
-	fc.Result = res
-	return ec.marshalNTagValue2ᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐTagValue(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Mutation_createTagValue(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_TagValue_id(ctx, field)
-			case "tag":
-				return ec.fieldContext_TagValue_tag(ctx, field)
-			case "asset":
-				return ec.fieldContext_TagValue_asset(ctx, field)
-			case "value":
-				return ec.fieldContext_TagValue_value(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type TagValue", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_createTagValue_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_updateTagValue(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_updateTagValue(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().UpdateTagValue(rctx, fc.Args["input"].(model.UpdateTagValue))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.TagValue)
-	fc.Result = res
-	return ec.marshalNTagValue2ᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐTagValue(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Mutation_updateTagValue(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_TagValue_id(ctx, field)
-			case "tag":
-				return ec.fieldContext_TagValue_tag(ctx, field)
-			case "asset":
-				return ec.fieldContext_TagValue_asset(ctx, field)
-			case "value":
-				return ec.fieldContext_TagValue_value(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type TagValue", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_updateTagValue_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_deleteTagValue(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_deleteTagValue(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().DeleteTagValue(rctx, fc.Args["input"].(model.DeleteTagValue))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.TagValue)
-	fc.Result = res
-	return ec.marshalNTagValue2ᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐTagValue(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Mutation_deleteTagValue(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_TagValue_id(ctx, field)
-			case "tag":
-				return ec.fieldContext_TagValue_tag(ctx, field)
-			case "asset":
-				return ec.fieldContext_TagValue_asset(ctx, field)
-			case "value":
-				return ec.fieldContext_TagValue_value(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type TagValue", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_deleteTagValue_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -2044,6 +1678,8 @@ func (ec *executionContext) fieldContext_Mutation_addGroup(ctx context.Context, 
 				return ec.fieldContext_Group_name(ctx, field)
 			case "users":
 				return ec.fieldContext_Group_users(ctx, field)
+			case "assets":
+				return ec.fieldContext_Group_assets(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Group", field.Name)
 		},
@@ -2107,6 +1743,8 @@ func (ec *executionContext) fieldContext_Mutation_addUser(ctx context.Context, f
 				return ec.fieldContext_User_email(ctx, field)
 			case "groups":
 				return ec.fieldContext_User_groups(ctx, field)
+			case "assets":
+				return ec.fieldContext_User_assets(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
@@ -2170,6 +1808,8 @@ func (ec *executionContext) fieldContext_Mutation_addUsertoGroup(ctx context.Con
 				return ec.fieldContext_Group_name(ctx, field)
 			case "users":
 				return ec.fieldContext_Group_users(ctx, field)
+			case "assets":
+				return ec.fieldContext_Group_assets(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Group", field.Name)
 		},
@@ -2233,6 +1873,8 @@ func (ec *executionContext) fieldContext_Mutation_removeUserFromGroup(ctx contex
 				return ec.fieldContext_Group_name(ctx, field)
 			case "users":
 				return ec.fieldContext_Group_users(ctx, field)
+			case "assets":
+				return ec.fieldContext_Group_assets(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Group", field.Name)
 		},
@@ -2483,8 +2125,6 @@ func (ec *executionContext) fieldContext_Query_asset(ctx context.Context, field 
 				return ec.fieldContext_Asset_id(ctx, field)
 			case "name":
 				return ec.fieldContext_Asset_name(ctx, field)
-			case "tagValues":
-				return ec.fieldContext_Asset_tagValues(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Asset", field.Name)
 		},
@@ -2497,134 +2137,6 @@ func (ec *executionContext) fieldContext_Query_asset(ctx context.Context, field 
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_asset_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Query_tagValue(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_tagValue(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().TagValue(rctx, fc.Args["id"].(*string), fc.Args["skip"].(*int), fc.Args["limit"].(*int))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*model.TagValue)
-	fc.Result = res
-	return ec.marshalNTagValue2ᚕᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐTagValueᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Query_tagValue(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_TagValue_id(ctx, field)
-			case "tag":
-				return ec.fieldContext_TagValue_tag(ctx, field)
-			case "asset":
-				return ec.fieldContext_TagValue_asset(ctx, field)
-			case "value":
-				return ec.fieldContext_TagValue_value(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type TagValue", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_tagValue_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Query_search(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_search(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Search(rctx, fc.Args["input"].(model.Search), fc.Args["skip"].(*int), fc.Args["limit"].(*int))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.SearchResult)
-	fc.Result = res
-	return ec.marshalNSearchResult2ᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐSearchResult(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Query_search(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "tag":
-				return ec.fieldContext_SearchResult_tag(ctx, field)
-			case "asset":
-				return ec.fieldContext_SearchResult_asset(ctx, field)
-			case "tagValue":
-				return ec.fieldContext_SearchResult_tagValue(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type SearchResult", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_search_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -2676,6 +2188,8 @@ func (ec *executionContext) fieldContext_Query_user(ctx context.Context, field g
 				return ec.fieldContext_User_email(ctx, field)
 			case "groups":
 				return ec.fieldContext_User_groups(ctx, field)
+			case "assets":
+				return ec.fieldContext_User_assets(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
@@ -2739,6 +2253,8 @@ func (ec *executionContext) fieldContext_Query_group(ctx context.Context, field 
 				return ec.fieldContext_Group_name(ctx, field)
 			case "users":
 				return ec.fieldContext_Group_users(ctx, field)
+			case "assets":
+				return ec.fieldContext_Group_assets(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Group", field.Name)
 		},
@@ -2941,164 +2457,6 @@ func (ec *executionContext) fieldContext_Query___schema(_ context.Context, field
 	return fc, nil
 }
 
-func (ec *executionContext) _SearchResult_tag(ctx context.Context, field graphql.CollectedField, obj *model.SearchResult) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_SearchResult_tag(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Tag, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*model.Tag)
-	fc.Result = res
-	return ec.marshalNTag2ᚕᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐTagᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_SearchResult_tag(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "SearchResult",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Tag_id(ctx, field)
-			case "name":
-				return ec.fieldContext_Tag_name(ctx, field)
-			case "assets":
-				return ec.fieldContext_Tag_assets(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Tag", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _SearchResult_asset(ctx context.Context, field graphql.CollectedField, obj *model.SearchResult) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_SearchResult_asset(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Asset, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*model.Asset)
-	fc.Result = res
-	return ec.marshalNAsset2ᚕᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐAssetᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_SearchResult_asset(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "SearchResult",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Asset_id(ctx, field)
-			case "name":
-				return ec.fieldContext_Asset_name(ctx, field)
-			case "tagValues":
-				return ec.fieldContext_Asset_tagValues(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Asset", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _SearchResult_tagValue(ctx context.Context, field graphql.CollectedField, obj *model.SearchResult) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_SearchResult_tagValue(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.TagValue, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*model.TagValue)
-	fc.Result = res
-	return ec.marshalNTagValue2ᚕᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐTagValueᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_SearchResult_tagValue(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "SearchResult",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_TagValue_id(ctx, field)
-			case "tag":
-				return ec.fieldContext_TagValue_tag(ctx, field)
-			case "asset":
-				return ec.fieldContext_TagValue_asset(ctx, field)
-			case "value":
-				return ec.fieldContext_TagValue_value(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type TagValue", field.Name)
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Tag_id(ctx context.Context, field graphql.CollectedField, obj *model.Tag) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Tag_id(ctx, field)
 	if err != nil {
@@ -3230,8 +2588,6 @@ func (ec *executionContext) fieldContext_Tag_assets(ctx context.Context, field g
 				return ec.fieldContext_Asset_id(ctx, field)
 			case "name":
 				return ec.fieldContext_Asset_name(ctx, field)
-			case "tagValues":
-				return ec.fieldContext_Asset_tagValues(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Asset", field.Name)
 		},
@@ -3246,198 +2602,6 @@ func (ec *executionContext) fieldContext_Tag_assets(ctx context.Context, field g
 	if fc.Args, err = ec.field_Tag_assets_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _TagValue_id(ctx context.Context, field graphql.CollectedField, obj *model.TagValue) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_TagValue_id(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.ID, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNID2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_TagValue_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "TagValue",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type ID does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _TagValue_tag(ctx context.Context, field graphql.CollectedField, obj *model.TagValue) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_TagValue_tag(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.TagValue().Tag(rctx, obj)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Tag)
-	fc.Result = res
-	return ec.marshalNTag2ᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐTag(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_TagValue_tag(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "TagValue",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Tag_id(ctx, field)
-			case "name":
-				return ec.fieldContext_Tag_name(ctx, field)
-			case "assets":
-				return ec.fieldContext_Tag_assets(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Tag", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _TagValue_asset(ctx context.Context, field graphql.CollectedField, obj *model.TagValue) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_TagValue_asset(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.TagValue().Asset(rctx, obj)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Asset)
-	fc.Result = res
-	return ec.marshalNAsset2ᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐAsset(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_TagValue_asset(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "TagValue",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Asset_id(ctx, field)
-			case "name":
-				return ec.fieldContext_Asset_name(ctx, field)
-			case "tagValues":
-				return ec.fieldContext_Asset_tagValues(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Asset", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _TagValue_value(ctx context.Context, field graphql.CollectedField, obj *model.TagValue) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_TagValue_value(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Value, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_TagValue_value(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "TagValue",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
 	}
 	return fc, nil
 }
@@ -3572,6 +2736,8 @@ func (ec *executionContext) fieldContext_User_groups(ctx context.Context, field 
 				return ec.fieldContext_Group_name(ctx, field)
 			case "users":
 				return ec.fieldContext_Group_users(ctx, field)
+			case "assets":
+				return ec.fieldContext_Group_assets(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Group", field.Name)
 		},
@@ -3584,6 +2750,64 @@ func (ec *executionContext) fieldContext_User_groups(ctx context.Context, field 
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_User_groups_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _User_assets(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_User_assets(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Assets, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Asset)
+	fc.Result = res
+	return ec.marshalOAsset2ᚕᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐAssetᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_User_assets(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "User",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Asset_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Asset_name(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Asset", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_User_assets_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -5363,166 +4587,6 @@ func (ec *executionContext) fieldContext___Type_specifiedByURL(_ context.Context
 
 // region    **************************** input.gotpl *****************************
 
-func (ec *executionContext) unmarshalInputDeleteTagValue(ctx context.Context, obj interface{}) (model.DeleteTagValue, error) {
-	var it model.DeleteTagValue
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"id"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "id":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-			data, err := ec.unmarshalNID2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ID = data
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputNewTagValue(ctx context.Context, obj interface{}) (model.NewTagValue, error) {
-	var it model.NewTagValue
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"tagID", "assetID", "value"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "tagID":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("tagID"))
-			data, err := ec.unmarshalNID2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.TagID = data
-		case "assetID":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("assetID"))
-			data, err := ec.unmarshalNID2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.AssetID = data
-		case "value":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("value"))
-			data, err := ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Value = data
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputSearch(ctx context.Context, obj interface{}) (model.Search, error) {
-	var it model.Search
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	if _, present := asMap["searchTagName"]; !present {
-		asMap["searchTagName"] = false
-	}
-	if _, present := asMap["searchTagValue"]; !present {
-		asMap["searchTagValue"] = false
-	}
-	if _, present := asMap["searchAssetName"]; !present {
-		asMap["searchAssetName"] = false
-	}
-
-	fieldsInOrder := [...]string{"text", "searchTagName", "searchTagValue", "searchAssetName"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "text":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("text"))
-			data, err := ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Text = data
-		case "searchTagName":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("searchTagName"))
-			data, err := ec.unmarshalNBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SearchTagName = data
-		case "searchTagValue":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("searchTagValue"))
-			data, err := ec.unmarshalNBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SearchTagValue = data
-		case "searchAssetName":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("searchAssetName"))
-			data, err := ec.unmarshalNBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SearchAssetName = data
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputUpdateTagValue(ctx context.Context, obj interface{}) (model.UpdateTagValue, error) {
-	var it model.UpdateTagValue
-	asMap := map[string]interface{}{}
-	for k, v := range obj.(map[string]interface{}) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"id", "value"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "id":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-			data, err := ec.unmarshalNID2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ID = data
-		case "value":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("value"))
-			data, err := ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Value = data
-		}
-	}
-
-	return it, nil
-}
-
 // endregion **************************** input.gotpl *****************************
 
 // region    ************************** interface.gotpl ***************************
@@ -5568,49 +4632,13 @@ func (ec *executionContext) _Asset(ctx context.Context, sel ast.SelectionSet, ob
 		case "id":
 			out.Values[i] = ec._Asset_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
+				out.Invalids++
 			}
 		case "name":
 			out.Values[i] = ec._Asset_name(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
+				out.Invalids++
 			}
-		case "tagValues":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Asset_tagValues(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -5737,6 +4765,8 @@ func (ec *executionContext) _Group(ctx context.Context, sel ast.SelectionSet, ob
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "assets":
+			out.Values[i] = ec._Group_assets(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -5789,27 +4819,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "createAsset":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_createAsset(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "createTagValue":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_createTagValue(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "updateTagValue":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_updateTagValue(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "deleteTagValue":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_deleteTagValue(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -5942,50 +4951,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "tagValue":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_tagValue(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx,
-					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "search":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_search(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx,
-					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "user":
 			field := field
 
@@ -6060,55 +5025,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Query___schema(ctx, field)
 			})
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
-
-	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
-var searchResultImplementors = []string{"SearchResult"}
-
-func (ec *executionContext) _SearchResult(ctx context.Context, sel ast.SelectionSet, obj *model.SearchResult) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, searchResultImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("SearchResult")
-		case "tag":
-			out.Values[i] = ec._SearchResult_tag(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "asset":
-			out.Values[i] = ec._SearchResult_asset(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "tagValue":
-			out.Values[i] = ec._SearchResult_tagValue(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -6212,122 +5128,6 @@ func (ec *executionContext) _Tag(ctx context.Context, sel ast.SelectionSet, obj 
 	return out
 }
 
-var tagValueImplementors = []string{"TagValue"}
-
-func (ec *executionContext) _TagValue(ctx context.Context, sel ast.SelectionSet, obj *model.TagValue) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, tagValueImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("TagValue")
-		case "id":
-			out.Values[i] = ec._TagValue_id(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "tag":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._TagValue_tag(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "asset":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._TagValue_asset(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "value":
-			out.Values[i] = ec._TagValue_value(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
-
-	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
 var userImplementors = []string{"User", "Identity"}
 
 func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj *model.User) graphql.Marshaler {
@@ -6382,6 +5182,8 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "assets":
+			out.Values[i] = ec._User_assets(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -6818,11 +5620,6 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
-func (ec *executionContext) unmarshalNDeleteTagValue2githubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐDeleteTagValue(ctx context.Context, v interface{}) (model.DeleteTagValue, error) {
-	res, err := ec.unmarshalInputDeleteTagValue(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
 func (ec *executionContext) marshalNGroup2githubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐGroup(ctx context.Context, sel ast.SelectionSet, v model.Group) graphql.Marshaler {
 	return ec._Group(ctx, sel, &v)
 }
@@ -6950,11 +5747,6 @@ func (ec *executionContext) marshalNIdentity2ᚕgithubᚗcomᚋdkrizicᚋtestser
 	return ret
 }
 
-func (ec *executionContext) unmarshalNNewTagValue2githubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐNewTagValue(ctx context.Context, v interface{}) (model.NewTagValue, error) {
-	res, err := ec.unmarshalInputNewTagValue(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
 func (ec *executionContext) unmarshalNPermission2githubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐPermission(ctx context.Context, v interface{}) (model.Permission, error) {
 	var res model.Permission
 	err := res.UnmarshalGQL(v)
@@ -6965,23 +5757,14 @@ func (ec *executionContext) marshalNPermission2githubᚗcomᚋdkrizicᚋtestserv
 	return v
 }
 
-func (ec *executionContext) unmarshalNSearch2githubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐSearch(ctx context.Context, v interface{}) (model.Search, error) {
-	res, err := ec.unmarshalInputSearch(ctx, v)
+func (ec *executionContext) unmarshalNPermissionQuery2githubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐPermissionQuery(ctx context.Context, v interface{}) (model.PermissionQuery, error) {
+	var res model.PermissionQuery
+	err := res.UnmarshalGQL(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNSearchResult2githubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐSearchResult(ctx context.Context, sel ast.SelectionSet, v model.SearchResult) graphql.Marshaler {
-	return ec._SearchResult(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNSearchResult2ᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐSearchResult(ctx context.Context, sel ast.SelectionSet, v *model.SearchResult) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._SearchResult(ctx, sel, v)
+func (ec *executionContext) marshalNPermissionQuery2githubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐPermissionQuery(ctx context.Context, sel ast.SelectionSet, v model.PermissionQuery) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {
@@ -7055,69 +5838,6 @@ func (ec *executionContext) marshalNTag2ᚖgithubᚗcomᚋdkrizicᚋtestserver�
 		return graphql.Null
 	}
 	return ec._Tag(ctx, sel, v)
-}
-
-func (ec *executionContext) marshalNTagValue2githubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐTagValue(ctx context.Context, sel ast.SelectionSet, v model.TagValue) graphql.Marshaler {
-	return ec._TagValue(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNTagValue2ᚕᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐTagValueᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.TagValue) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNTagValue2ᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐTagValue(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
-func (ec *executionContext) marshalNTagValue2ᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐTagValue(ctx context.Context, sel ast.SelectionSet, v *model.TagValue) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._TagValue(ctx, sel, v)
-}
-
-func (ec *executionContext) unmarshalNUpdateTagValue2githubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐUpdateTagValue(ctx context.Context, v interface{}) (model.UpdateTagValue, error) {
-	res, err := ec.unmarshalInputUpdateTagValue(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalNUser2githubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐUser(ctx context.Context, sel ast.SelectionSet, v model.User) graphql.Marshaler {
@@ -7429,6 +6149,53 @@ func (ec *executionContext) marshalN__TypeKind2string(ctx context.Context, sel a
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) marshalOAsset2ᚕᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐAssetᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Asset) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNAsset2ᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐAsset(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalOBoolean2bool(ctx context.Context, v interface{}) (bool, error) {

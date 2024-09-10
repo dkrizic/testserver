@@ -9,12 +9,14 @@ type User {
   id: String!
   email: String!
   groups(skip:Int = 0,limit:Int = 20): [Group!]
+  assets(skip:Int = 0,limit:Int = 20, permission: PermissionQuery!): [Asset!]
 }
 
 type Group {
   id: String!
   name: String!
   users(skip:Int = 0,limit:Int = 20): [User!]
+  assets(skip:Int = 0,limit:Int = 20, permission: PermissionQuery!): [Asset!]
 }
 
 # enum for read and write permissions
@@ -23,75 +25,98 @@ enum Permission {
   WRITE
 }
 
+enum PermissionQuery {
+  READ
+  WRITE
+  ALL
+}
+
 type Assignment {
   identity: Identity!
   permission: Permission!
   asset: Asset!
 }
 
-type Tag {
-  id: String!
-  name: String!
-  assets(skip:Int = 0,limit:Int = 20): [Asset!]!
-}
-
 type Asset {
   id: ID!
   name: String!
-  tagValues: [TagValue!]!
+  permissions(skip: Int = 0, limit: Int = 10): [Assignment!]
+  files(skip: Int = 0, limit: Int = 10): [File!]
 }
 
-input Search {
-  text: String!
-  searchTagName: Boolean! = false
-  searchTagValue: Boolean! = false
-  searchAssetName: Boolean! = false
+type File {
+  id: ID!
+  name: String!
+  asset: Asset!
 }
 
-type SearchResult {
-  tag: [Tag!]!
-  asset: [Asset!]!
-  tagValue: [TagValue!]!
+interface TagCategory {
+  id: ID!
+  label: String!
+  staticTags: [StaticTag]!
+  valueType: ValueType!
+}
+
+type RootTagCategory implements TagCategory {
+  id: ID!
+  label: String!
+  staticTags: [StaticTag]!
+  children: [ChildTagCategory]
+  valueType: ValueType!
+}
+
+type ChildTagCategory implements TagCategory {
+  id: ID!
+  label: String!
+  staticTags: [StaticTag]!
+  parent: TagCategory!
+  valueType: ValueType!
+}
+
+interface StaticTag {
+  id: ID!
+  label: String!
+  category: TagCategory!
+  isDeleted: Boolean!
+  tagCategory: TagCategory!
+}
+
+type RootStaticTag implements StaticTag {
+  id: ID!
+  label: String!
+  category: TagCategory!
+  isDeleted: Boolean!
+  children: [ChildStaticTag]
+  tagCategory: TagCategory!
+}
+
+type ChildStaticTag implements StaticTag {
+  id: ID!
+  label: String!
+  category: TagCategory!
+  isDeleted: Boolean!
+  parent: StaticTag!
+  tagCategory: TagCategory!
+}
+
+enum ValueType {
+  STATIC
+  STRING
+  NUMERIC
+  BOOLEAN
 }
 
 type Query {
-  tag(id:ID, skip: Int = 0, limit: Int = 10): [Tag!]!
   asset(id:ID, skip: Int = 0, limit: Int = 10): [Asset!]!
-  tagValue(id:ID, skip: Int = 0, limit: Int = 10): [TagValue!]!
-  search(input: Search!, skip: Int = 0, limit: Int = 10): SearchResult!
   user(id:ID, skip: Int =0, limit: Int = 10): [User!]!
   group(id:ID, skip: Int = 0, limit: Int = 10): [Group!]!
   identity(skip: Int = 0, limit: Int = 10): [Identity!]!
+  tagCategory(id: ID): TagCategory
 }
 
-type TagValue {
-  id: ID!
-  tag : Tag!
-  asset: Asset!
-  value: String!
-}
-
-input NewTagValue {
-  tagID: ID!
-  assetID: ID!
-  value: String!
-}
-
-input UpdateTagValue {
-  id: ID!
-  value: String!
-}
-
-input DeleteTagValue {
-  id: ID!
-}
 
 type Mutation {
-  createTag(tagName: String!): Tag!
   createAsset(assetName: String!): Asset!
-  createTagValue(input: NewTagValue!): TagValue!
-  updateTagValue(input: UpdateTagValue!): TagValue!
-  deleteTagValue(input: DeleteTagValue!): TagValue!
   addGroup(name: String!): Group!
   addUser(email: String!): User!
   addUsertoGroup(userID: ID!, groupID: ID!): Group!

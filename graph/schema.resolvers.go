@@ -10,44 +10,10 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/dkrizic/testserver/database"
 	"github.com/dkrizic/testserver/graph/model"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
-
-// TagValues is the resolver for the tagValues field.
-func (r *assetResolver) TagValues(ctx context.Context, obj *model.Asset) ([]*model.TagValue, error) {
-	span := trace.SpanFromContext(ctx)
-	span.SetAttributes(attribute.String("id", obj.ID))
-	slog.InfoContext(ctx, "TagValues(byAsset)", "id", obj.ID)
-
-	query := "SELECT id,tag_id,asset_id,value FROM tagvalue WHERE asset_id = ?"
-	span.SetAttributes(
-		attribute.String("db.query.text", query),
-		attribute.String("db.parameter.id", obj.ID))
-	result, err := r.dB.Query(query, obj.ID)
-	if err != nil {
-		return nil, err
-	}
-	defer result.Close()
-
-	tagValues := []*model.TagValue{}
-	for result.Next() {
-		tagValueTemp := &database.TagValue{}
-		err := result.Scan(&tagValueTemp.ID, &tagValueTemp.TagID, &tagValueTemp.AssetID, &tagValueTemp.Value)
-		if err != nil {
-			return nil, err
-		}
-		var tagValue model.TagValue
-		tagValue.ID = tagValueTemp.ID
-		tagValue.Value = tagValueTemp.Value
-		tagValues = append(tagValues, &tagValue)
-	}
-
-	span.SetAttributes(attribute.Int("tagValues.count", len(tagValues)))
-	return tagValues, nil
-}
 
 // Users is the resolver for the users field.
 func (r *groupResolver) Users(ctx context.Context, obj *model.Group, skip *int, limit *int) ([]*model.User, error) {
@@ -107,44 +73,6 @@ func (r *mutationResolver) CreateAsset(ctx context.Context, assetName string) (*
 		return nil, err
 	}
 	return &model.Asset{ID: fmt.Sprintf("%d", id), Name: assetName}, nil
-}
-
-// CreateTagValue is the resolver for the createTagValue field.
-func (r *mutationResolver) CreateTagValue(ctx context.Context, input model.NewTagValue) (*model.TagValue, error) {
-	slog.Info("Create tag value", "tag_id", input.TagID, "asset_id", input.AssetID, "value", input.Value)
-	result, err := r.dB.Exec("INSERT INTO tagvalue (tag_id,asset_id,value) VALUES (?,?,?)", input.TagID, input.AssetID, input.Value)
-	if err != nil {
-		return nil, err
-	}
-	id, err := result.LastInsertId()
-	if err != nil {
-		return nil, err
-	}
-	return &model.TagValue{ID: fmt.Sprintf("%d", id), Tag: &model.Tag{ID: input.TagID}, Asset: &model.Asset{ID: input.AssetID}, Value: input.Value}, nil
-}
-
-// UpdateTagValue is the resolver for the updateTagValue field.
-func (r *mutationResolver) UpdateTagValue(ctx context.Context, input model.UpdateTagValue) (*model.TagValue, error) {
-	slog.Info("Update tag value", "id", input.ID, "value", input.Value)
-	_, err := r.dB.Exec("UPDATE tagvalue SET value = ? WHERE id = ?", input.Value, input.ID)
-	if err != nil {
-		return nil, err
-	}
-	return &model.TagValue{ID: input.ID, Value: input.Value}, nil
-}
-
-// DeleteTagValue is the resolver for the deleteTagValue field.
-func (r *mutationResolver) DeleteTagValue(ctx context.Context, input model.DeleteTagValue) (*model.TagValue, error) {
-	slog.Info("Delete tag value", "id", input.ID)
-	result, err := r.dB.Exec("DELETE FROM tagvalue WHERE id = ?", input.ID)
-	if err != nil {
-		return nil, err
-	}
-	id, err := result.LastInsertId()
-	if err != nil {
-		return nil, err
-	}
-	return &model.TagValue{ID: fmt.Sprintf("%d", id)}, nil
 }
 
 // AddGroup is the resolver for the addGroup field.
@@ -313,99 +241,6 @@ func (r *queryResolver) Asset(ctx context.Context, id *string, skip *int, limit 
 	}
 	span.SetAttributes(attribute.Int("assets.count", len(assets)))
 	return assets, nil
-}
-
-// TagValue is the resolver for the tagValue field.
-func (r *queryResolver) TagValue(ctx context.Context, id *string, skip *int, limit *int) ([]*model.TagValue, error) {
-	span := trace.SpanFromContext(ctx)
-	span.SetAttributes(
-		attribute.String("db.system", "mysql"),
-		attribute.String("db.operation.name", "select"),
-		attribute.Int("skip", *skip),
-		attribute.Int("limit", *limit))
-	if id != nil {
-		span.SetAttributes(attribute.String("id", *id))
-	}
-	slog.Info("TagValue", "id", id, "skip", *skip, "limit", *limit)
-	var result *sql.Rows
-	var err error
-	if id != nil {
-		query := "SELECT id,tag_id,asset_id,value FROM tagvalue WHERE id = ? LIMIT ?,?"
-		span.SetAttributes(
-			attribute.String("db.query.text", query),
-			attribute.String("db.query.parameter.id", *id))
-		result, err = r.dB.Query(query, *id, *skip, *limit)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		query := "SELECT id,tag_id,asset_id,value FROM tagvalue limit ?,?"
-		span.SetAttributes(attribute.String("db.query.text", query))
-		result, err = r.dB.Query(query, *skip, *limit)
-		if err != nil {
-			return nil, err
-		}
-	}
-	defer result.Close()
-
-	tagValues := []*model.TagValue{}
-	for result.Next() {
-		tagValueTemp := &database.TagValue{}
-		err := result.Scan(&tagValueTemp.ID, &tagValueTemp.TagID, &tagValueTemp.AssetID, &tagValueTemp.Value)
-		var tagValue model.TagValue
-		tagValue.ID = tagValueTemp.ID
-		tagValue.Value = tagValueTemp.Value
-
-		if err != nil {
-			return nil, err
-		}
-		tagValues = append(tagValues, &tagValue)
-	}
-
-	span.SetAttributes(attribute.Int("tagValues.count", len(tagValues)))
-	return tagValues, nil
-}
-
-// Search is the resolver for the search field.
-func (r *queryResolver) Search(ctx context.Context, input model.Search, skip *int, limit *int) (*model.SearchResult, error) {
-	span := trace.SpanFromContext(ctx)
-	span.SetAttributes(
-		attribute.String("query", input.Text),
-		attribute.Bool("searchAssetName", input.SearchAssetName),
-		attribute.Bool("searchTagName", input.SearchTagName),
-		attribute.Bool("searchTagValue", input.SearchTagValue),
-		attribute.Int("skip", *skip),
-		attribute.Int("limit", *limit))
-
-	slog.Info("Search",
-		"text", input.Text,
-		"searchAssetName", input.SearchAssetName,
-		"searchTagName", input.SearchTagName,
-		"searchTagValue", input.SearchTagValue)
-	searchResult := &model.SearchResult{}
-	if input.SearchAssetName {
-		assets, err := r.searchAssetName(ctx, input.Text, *skip, *limit)
-		if err != nil {
-			return nil, err
-		}
-		searchResult.Asset = assets
-	}
-	if input.SearchTagName {
-		tags, err := r.searchTagName(ctx, input.Text, *skip, *limit)
-		if err != nil {
-			return nil, err
-		}
-		searchResult.Tag = tags
-	}
-	if input.SearchTagValue {
-		tagValues, err := r.searchTagValue(ctx, input.Text, *skip, *limit)
-		if err != nil {
-			return nil, err
-		}
-		searchResult.TagValue = tagValues
-	}
-
-	return searchResult, nil
 }
 
 // User is the resolver for the user field.
@@ -581,64 +416,6 @@ func (r *tagResolver) Assets(ctx context.Context, obj *model.Tag, skip *int, lim
 	return assets, nil
 }
 
-// Tag is the resolver for the tag field.
-func (r *tagValueResolver) Tag(ctx context.Context, obj *model.TagValue) (*model.Tag, error) {
-	span := trace.SpanFromContext(ctx)
-	span.SetAttributes(
-		attribute.String("db.system", "mysql"),
-		attribute.String("db.operation.name", "select"),
-		attribute.String("id", obj.ID))
-	slog.DebugContext(ctx, "Tag(byTagValue)", "id", obj.ID)
-
-	query := "SELECT tag.id,tag.name FROM tag,tagvalue where tagvalue.tag_id = tag.id and tagvalue.id = ?"
-	span.SetAttributes(
-		attribute.String("db.query.text", query),
-		attribute.String("db.parameter.id", obj.ID))
-	result, err := r.dB.Query(query, obj.ID)
-	if err != nil {
-		return nil, err
-	}
-	defer result.Close()
-
-	var tag model.Tag
-	for result.Next() {
-		err := result.Scan(&tag.ID, &tag.Name)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return &tag, nil
-}
-
-// Asset is the resolver for the asset field.
-func (r *tagValueResolver) Asset(ctx context.Context, obj *model.TagValue) (*model.Asset, error) {
-	span := trace.SpanFromContext(ctx)
-	span.SetAttributes(attribute.String("id", obj.ID))
-	slog.DebugContext(ctx, "Asset(byTagValue)", "id", obj.ID)
-	span.SetAttributes(
-		attribute.String("db.system", "mysql"),
-		attribute.String("db.operation.name", "select"))
-
-	query := "SELECT asset.id,asset.name FROM asset,tagvalue where tagvalue.asset_id = asset.id and tagvalue.id = ?"
-	span.SetAttributes(
-		attribute.String("db.query.text", query),
-		attribute.String("db.parameter.id", obj.ID))
-	result, err := r.dB.Query(query, obj.ID)
-	if err != nil {
-		return nil, err
-	}
-	defer result.Close()
-
-	var asset model.Asset
-	for result.Next() {
-		err := result.Scan(&asset.ID, &asset.Name)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return &asset, nil
-}
-
 // Groups is the resolver for the groups field.
 func (r *userResolver) Groups(ctx context.Context, obj *model.User, skip *int, limit *int) ([]*model.Group, error) {
 	slog.Info("Groups(forUser)", "id", obj.ID, "skip", skip, "limit", limit)
@@ -671,9 +448,6 @@ func (r *userResolver) Groups(ctx context.Context, obj *model.User, skip *int, l
 	return groups, nil
 }
 
-// Asset returns AssetResolver implementation.
-func (r *Resolver) Asset() AssetResolver { return &assetResolver{r} }
-
 // Group returns GroupResolver implementation.
 func (r *Resolver) Group() GroupResolver { return &groupResolver{r} }
 
@@ -686,16 +460,11 @@ func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 // Tag returns TagResolver implementation.
 func (r *Resolver) Tag() TagResolver { return &tagResolver{r} }
 
-// TagValue returns TagValueResolver implementation.
-func (r *Resolver) TagValue() TagValueResolver { return &tagValueResolver{r} }
-
 // User returns UserResolver implementation.
 func (r *Resolver) User() UserResolver { return &userResolver{r} }
 
-type assetResolver struct{ *Resolver }
 type groupResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type tagResolver struct{ *Resolver }
-type tagValueResolver struct{ *Resolver }
 type userResolver struct{ *Resolver }
