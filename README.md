@@ -20,3 +20,7 @@
   * /health endpoint
 * Version awareness: Exploses the own version via /version endpoint
 
+## Diagram
+
+![graph.png](graph.png)
+

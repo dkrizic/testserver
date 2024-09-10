@@ -12,5 +12,8 @@ run: build
 image:
 	docker build -t testserver .
 
+diagram:
+	graphqlviz graph/schema.graphqls | dot -Tpng -o graph.png
+
 clean:
 	rm -f testserver

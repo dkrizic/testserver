@@ -23,7 +23,7 @@ const (
 	defaultPath = "/"
 	versionPath = "/version"
 	healthPath  = "/health"
-	queryPath   = "/query"
+	queryPath   = "/graph"
 )
 
 type Service struct {
@@ -166,7 +166,7 @@ func (s *Service) Run() error {
 	mux.Handle(queryPath, queryHandler)
 
 	slog.Info("Binding playground", "path", defaultPath)
-	mux.Handle("/", playground.Handler("GraphQL playground", "/query"))
+	mux.Handle("/", playground.Handler("GraphQL playground", queryPath))
 
 	logHandler := log2.LogHandler(mux)
 
