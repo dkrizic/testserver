@@ -19,6 +19,7 @@ type config struct {
 	username string
 	password string
 	database string
+	clean    bool
 }
 
 type Opts func(*config)
@@ -60,6 +61,7 @@ func NewConnection(opts ...Opts) (db *sql.DB, err error) {
 		username: "root",
 		password: "",
 		database: "testserver",
+		clean:    false,
 	}
 
 	for _, opt := range opts {
@@ -82,6 +84,23 @@ func NewConnection(opts ...Opts) (db *sql.DB, err error) {
 
 	slog.Info("Connected to database", "host", c.host, "port", c.port, "username", c.username, "database", c.database)
 	return db, nil
+}
+
+func CleanSchema(db *sql.DB) error {
+	slog.Info("Cleaning schema")
+	goose.SetBaseFS(embedMigrations)
+
+	err := goose.SetDialect("mysql")
+	if err != nil {
+		return err
+	}
+
+	err = goose.DownTo(db, "schema", 0)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func MigrateSchema(db *sql.DB) error {

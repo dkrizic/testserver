@@ -4894,3 +4894,4 @@ insert into tagvalue (id, tag_id, asset_id, value) values (8128, 7, 407, '128');
 insert into tagvalue (id, tag_id, asset_id, value) values (8129, 8, 407, '8');
 insert into tagvalue (id, tag_id, asset_id, value) values (8130, 9, 407, 'not mentioned');
 insert into tagvalue (id, tag_id, asset_id, value) values (8131, 10, 407, '12');
+

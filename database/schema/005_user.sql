@@ -1,5 +1,8 @@
 -- +goose Up
 CREATE TABLE user (
-    id int not null PRIMARY KEY auto_increment,
+    id char(36) not null PRIMARY KEY,
     email VARCHAR(255) NOT NULL
 );
+
+-- +goose Down
+DROP TABLE user;

@@ -28,6 +28,7 @@ func main() {
 		"database-port", c.Service().DatabasePort(),
 		"database-user", c.Service().DatabaseUser(),
 		"database-name", c.Service().DatabaseName(),
+		"database-clean", c.Service().DatabaseClean(),
 		"opentelemetry-endpoint", c.OpenTelemetryEndpoint(),
 		"check-token", c.CheckToken())
 
@@ -54,6 +55,7 @@ func main() {
 		service.DatabaseUsername(c.Service().DatabaseUser()),
 		service.DatabasePassword(c.Service().DatabasePassword()),
 		service.DatabaseName(c.Service().DatabaseHost()),
+		service.CleanDatabase(c.Service().DatabaseClean()),
 		service.CheckToken(c.CheckToken()))
 	if err != nil {
 		slog.Error("Failed to create service", "error", err)

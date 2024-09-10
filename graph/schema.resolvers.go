@@ -150,7 +150,7 @@ func (r *mutationResolver) DeleteTagValue(ctx context.Context, input model.Delet
 // AddGroup is the resolver for the addGroup field.
 func (r *mutationResolver) AddGroup(ctx context.Context, name string) (*model.Group, error) {
 	slog.Info("Add group", "name", name)
-	result, err := r.dB.Exec("INSERT INTO xgroup (name) VALUES (?)", name)
+	result, err := r.dB.Exec("INSERT INTO `group` (name) VALUES (?)", name)
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +198,7 @@ func (r *mutationResolver) RemoveUserFromGroup(ctx context.Context, userID strin
 	}
 
 	slog.Debug("Loading group", "id", groupID)
-	result, err := r.dB.Query("SELECT id,name FROM xgroup WHERE id = ?", groupID)
+	result, err := r.dB.Query("SELECT id,name FROM `group` WHERE id = ?", groupID)
 	if err != nil {
 		return nil, err
 	}
@@ -477,7 +477,7 @@ func (r *queryResolver) Group(ctx context.Context, id *string, skip *int, limit 
 			return nil, err
 		}
 	} else {
-		query := "SELECT id,name FROM xgroup LIMIT ?,?"
+		query := "SELECT id,name FROM `group` LIMIT ?,?"
 		span.SetAttributes(attribute.String("db.query.text", query))
 		result, err = r.dB.Query(query, *skip, *limit)
 		if err != nil {
@@ -526,7 +526,7 @@ func (r *queryResolver) Identity(ctx context.Context, skip *int, limit *int) ([]
 		identities = append(identities, user)
 	}
 
-	query = "SELECT id,name FROM xgroup LIMIT ?,?"
+	query = "SELECT id,name FROM `group` LIMIT ?,?"
 	span.SetAttributes(attribute.String("db.query.text", query))
 	result, err = r.dB.Query(query, *skip, *limit)
 	if err != nil {
@@ -649,7 +649,7 @@ func (r *userResolver) Groups(ctx context.Context, obj *model.User, skip *int, l
 		attribute.Int("skip", *skip),
 		attribute.Int("limit", *limit))
 	span.SetAttributes(attribute.String("id", obj.ID))
-	query := "SELECT xgroup.id,xgroup.name FROM xgroup,user_group where user_group.group_id = xgroup.id and user_group.user_id = ? limit ?,?"
+	query := "SELECT `group`.id,`group`.name FROM `group`,user_group where user_group.group_id = `group`.id and user_group.user_id = ? limit ?,?"
 	span.SetAttributes(
 		attribute.String("db.query.text", query),
 		attribute.String("db.parameter.id", obj.ID))

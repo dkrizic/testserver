@@ -34,6 +34,7 @@ type Service struct {
 	DatabaseUsername string
 	DatabasePassword string
 	DatabaseName     string
+	CleanDatabase    bool
 }
 
 type Opts func(*Service)
@@ -74,6 +75,12 @@ func DatabaseName(name string) Opts {
 	}
 }
 
+func CleanDatabase(clean bool) Opts {
+	return func(s *Service) {
+		s.CleanDatabase = clean
+	}
+}
+
 func CheckToken(checkToken bool) Opts {
 	return func(s *Service) {
 		s.CheckToken = checkToken
@@ -105,6 +112,13 @@ func (s *Service) Run() error {
 	if err != nil {
 		slog.Error("Failed to connecto to database", "error", err)
 		return err
+	}
+
+	if s.CleanDatabase {
+		err = database.CleanSchema(db)
+		if err != nil {
+			slog.Warn("Failed to clean schema - ignoring", "error", err)
+		}
 	}
 
 	err = database.MigrateSchema(db)

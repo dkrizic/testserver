@@ -27,6 +27,8 @@ const (
 	keyOpenTelemetryEndpointEnvironment = "OPENTELEMETRY_ENDPOINT"
 	keyCheckToken                       = "check-token"
 	keyCheckTokenEnvironment            = "CHECK_TOKEN"
+	keyCleanDatabase                    = "clean-database"
+	keyCleanDatabaseEnvironment         = "CLEAN_DATABASE"
 )
 
 type Database struct {
@@ -35,6 +37,7 @@ type Database struct {
 	user     string
 	password string
 	name     string
+	clean    bool
 }
 
 type Token struct {
@@ -65,6 +68,7 @@ func New() (*Config, error) {
 	flag.StringVar(&c.service.database.name, keyDatabaseName, lookupEnvOrString(keyDatabaseNameEnvironment, "testserver"), "The name of the database")
 	flag.StringVar(&c.openTelemetryEndpoint, keyOpenTelemetryEndpoint, lookupEnvOrString(keyOpenTelemetryEndpointEnvironment, ""), "The OpenTelemetry endpoint")
 	flag.BoolVar(&c.service.token.checkToken, keyCheckToken, lookupEnvOrBool(keyCheckTokenEnvironment, true), "Check the token")
+	flag.BoolVar(&c.service.database.clean, keyCleanDatabase, lookupEnvOrBool(keyCleanDatabaseEnvironment, false), "Clean the database")
 
 	flag.Parse()
 
@@ -112,6 +116,10 @@ func (c Service) DatabasePassword() string {
 
 func (c Service) DatabaseName() string {
 	return c.database.name
+}
+
+func (c Service) DatabaseClean() bool {
+	return c.database.clean
 }
 
 func (c Config) OpenTelemetryEndpoint() string {
