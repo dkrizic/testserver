@@ -28,10 +28,10 @@ enum Permission {
 enum PermissionQuery {
   READ
   WRITE
-  ALL
+  READ_OR_WRITE
 }
 
-type Assignment {
+type Access {
   identity: Identity!
   permission: Permission!
   asset: Asset!
@@ -40,7 +40,7 @@ type Assignment {
 type Asset {
   id: ID!
   name: String!
-  permissions(skip: Int = 0, limit: Int = 10): [Assignment!]
+  permissions(skip: Int = 0, limit: Int = 10): [Access!]
   files(skip: Int = 0, limit: Int = 10): [File!]
 }
 
@@ -70,7 +70,9 @@ type ChildTagCategory implements TagCategory {
   label: String!
   staticTags: [StaticTag]!
   parent: TagCategory!
+  children: [ChildTagCategory]
   valueType: ValueType!
+  tags: [Tag]!
 }
 
 interface StaticTag {
@@ -106,6 +108,13 @@ enum ValueType {
   BOOLEAN
 }
 
+type Tag {
+  id: ID!
+  tagCategory: TagCategory!
+  asset: Asset!
+  value: String!
+}
+
 type Query {
   asset(id:ID, skip: Int = 0, limit: Int = 10): [Asset!]!
   user(id:ID, skip: Int =0, limit: Int = 10): [User!]!
@@ -115,12 +124,12 @@ type Query {
 }
 
 
-type Mutation {
-  createAsset(assetName: String!): Asset!
-  addGroup(name: String!): Group!
-  addUser(email: String!): User!
-  addUsertoGroup(userID: ID!, groupID: ID!): Group!
-  removeUserFromGroup(userID: ID!, groupID: ID!): Group!
-  assignPermission(identityID: ID!, assetID: ID!, permission: Permission!): Assignment!
-  removePermission(identityID: ID!, assetID: ID!): Assignment!
-}
+#type Mutation {
+#  createAsset(assetName: String!): Asset!
+#  addGroup(name: String!): Group!
+#  addUser(email: String!): User!
+#  addUsertoGroup(userID: ID!, groupID: ID!): Group!
+#  removeUserFromGroup(userID: ID!, groupID: ID!): Group!
+#  createAccess(identityID: ID!, assetID: ID!, permission: Permission!): Access!
+#  removeAccess(identityID: ID!, assetID: ID!): Access!
+#}
