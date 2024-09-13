@@ -15,6 +15,8 @@ type Identity interface {
 type Tag interface {
 	IsTag()
 	GetID() string
+	GetParentTag() Tag
+	GetChildTags() []Tag
 }
 
 type TagCategory interface {
@@ -44,10 +46,23 @@ type DynamicTag struct {
 	ID          string              `json:"id"`
 	TagCategory *DynamicTagCategory `json:"tagCategory"`
 	Value       string              `json:"value"`
+	ParentTag   Tag                 `json:"parentTag,omitempty"`
+	ChildTags   []Tag               `json:"childTags,omitempty"`
 }
 
-func (DynamicTag) IsTag()             {}
-func (this DynamicTag) GetID() string { return this.ID }
+func (DynamicTag) IsTag()                 {}
+func (this DynamicTag) GetID() string     { return this.ID }
+func (this DynamicTag) GetParentTag() Tag { return this.ParentTag }
+func (this DynamicTag) GetChildTags() []Tag {
+	if this.ChildTags == nil {
+		return nil
+	}
+	interfaceSlice := make([]Tag, 0, len(this.ChildTags))
+	for _, concrete := range this.ChildTags {
+		interfaceSlice = append(interfaceSlice, concrete)
+	}
+	return interfaceSlice
+}
 
 type DynamicTagCategory struct {
 	ID                 string        `json:"id"`
@@ -107,10 +122,23 @@ type StaticTag struct {
 	Name            string             `json:"name"`
 	TagCategory     *StaticTagCategory `json:"tagCategory"`
 	ParentStaticTag *StaticTag         `json:"parentStaticTag,omitempty"`
+	ParentTag       Tag                `json:"parentTag,omitempty"`
+	ChildTags       []Tag              `json:"childTags,omitempty"`
 }
 
-func (StaticTag) IsTag()             {}
-func (this StaticTag) GetID() string { return this.ID }
+func (StaticTag) IsTag()                 {}
+func (this StaticTag) GetID() string     { return this.ID }
+func (this StaticTag) GetParentTag() Tag { return this.ParentTag }
+func (this StaticTag) GetChildTags() []Tag {
+	if this.ChildTags == nil {
+		return nil
+	}
+	interfaceSlice := make([]Tag, 0, len(this.ChildTags))
+	for _, concrete := range this.ChildTags {
+		interfaceSlice = append(interfaceSlice, concrete)
+	}
+	return interfaceSlice
+}
 
 type StaticTagCategory struct {
 	ID                 string        `json:"id"`

@@ -93,6 +93,8 @@ type DynamicTagCategory implements TagCategory {
 
 interface Tag {
   id: ID!
+  parentTag: Tag
+  childTags(skip: Int = 0, limit: Int = 10): [Tag!]
 }
 
 # Mobile
@@ -101,12 +103,16 @@ type StaticTag implements Tag {
   name: String!
   tagCategory: StaticTagCategory!
   parentStaticTag: StaticTag
+  parentTag: Tag
+  childTags(skip: Int = 0, limit: Int = 10): [Tag!]
 }
 
 type DynamicTag implements Tag {
   id: ID!
   tagCategory: DynamicTagCategory!
   value: String!
+  parentTag: Tag
+  childTags(skip: Int = 0, limit: Int = 10): [Tag!]
 }
 
 type Query {
