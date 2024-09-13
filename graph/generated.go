@@ -77,6 +77,7 @@ type ComplexityRoot struct {
 		ID                 func(childComplexity int) int
 		Name               func(childComplexity int) int
 		ParentTagCategory  func(childComplexity int) int
+		RootTags           func(childComplexity int, skip *int, limit *int) int
 	}
 
 	File struct {
@@ -114,6 +115,7 @@ type ComplexityRoot struct {
 		IsOpen             func(childComplexity int) int
 		Name               func(childComplexity int) int
 		ParentTagCategory  func(childComplexity int) int
+		RootTags           func(childComplexity int, skip *int, limit *int) int
 		StaticTags         func(childComplexity int, skip *int, limit *int) int
 	}
 
@@ -308,6 +310,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.DynamicTagCategory.ParentTagCategory(childComplexity), true
+
+	case "DynamicTagCategory.rootTags":
+		if e.complexity.DynamicTagCategory.RootTags == nil {
+			break
+		}
+
+		args, err := ec.field_DynamicTagCategory_rootTags_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.DynamicTagCategory.RootTags(childComplexity, args["skip"].(*int), args["limit"].(*int)), true
 
 	case "File.asset":
 		if e.complexity.File.Asset == nil {
@@ -507,6 +521,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.StaticTagCategory.ParentTagCategory(childComplexity), true
+
+	case "StaticTagCategory.rootTags":
+		if e.complexity.StaticTagCategory.RootTags == nil {
+			break
+		}
+
+		args, err := ec.field_StaticTagCategory_rootTags_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.StaticTagCategory.RootTags(childComplexity, args["skip"].(*int), args["limit"].(*int)), true
 
 	case "StaticTagCategory.staticTags":
 		if e.complexity.StaticTagCategory.StaticTags == nil {
@@ -786,6 +812,30 @@ func (ec *executionContext) field_DynamicTagCategory_dynamicTags_args(ctx contex
 	return args, nil
 }
 
+func (ec *executionContext) field_DynamicTagCategory_rootTags_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *int
+	if tmp, ok := rawArgs["skip"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("skip"))
+		arg0, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["skip"] = arg0
+	var arg1 *int
+	if tmp, ok := rawArgs["limit"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limit"))
+		arg1, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["limit"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_Group_assets_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -1021,6 +1071,30 @@ func (ec *executionContext) field_Query_user_args(ctx context.Context, rawArgs m
 }
 
 func (ec *executionContext) field_StaticTagCategory_childTagCategories_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *int
+	if tmp, ok := rawArgs["skip"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("skip"))
+		arg0, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["skip"] = arg0
+	var arg1 *int
+	if tmp, ok := rawArgs["limit"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limit"))
+		arg1, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["limit"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_StaticTagCategory_rootTags_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 *int
@@ -1662,6 +1736,8 @@ func (ec *executionContext) fieldContext_DynamicTag_tagCategory(_ context.Contex
 				return ec.fieldContext_DynamicTagCategory_dynamicTags(ctx, field)
 			case "format":
 				return ec.fieldContext_DynamicTagCategory_format(ctx, field)
+			case "rootTags":
+				return ec.fieldContext_DynamicTagCategory_rootTags(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type DynamicTagCategory", field.Name)
 		},
@@ -1991,6 +2067,58 @@ func (ec *executionContext) fieldContext_DynamicTagCategory_format(_ context.Con
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
 		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DynamicTagCategory_rootTags(ctx context.Context, field graphql.CollectedField, obj *model.DynamicTagCategory) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DynamicTagCategory_rootTags(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.RootTags, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]model.Tag)
+	fc.Result = res
+	return ec.marshalOTag2ᚕgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐTagᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DynamicTagCategory_rootTags(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DynamicTagCategory",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("FieldContext.Child cannot be called on type INTERFACE")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_DynamicTagCategory_rootTags_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -2977,6 +3105,8 @@ func (ec *executionContext) fieldContext_StaticTag_tagCategory(_ context.Context
 				return ec.fieldContext_StaticTagCategory_staticTags(ctx, field)
 			case "isOpen":
 				return ec.fieldContext_StaticTagCategory_isOpen(ctx, field)
+			case "rootTags":
+				return ec.fieldContext_StaticTagCategory_rootTags(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type StaticTagCategory", field.Name)
 		},
@@ -3318,6 +3448,58 @@ func (ec *executionContext) fieldContext_StaticTagCategory_isOpen(_ context.Cont
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Boolean does not have child fields")
 		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _StaticTagCategory_rootTags(ctx context.Context, field graphql.CollectedField, obj *model.StaticTagCategory) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_StaticTagCategory_rootTags(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.RootTags, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]model.Tag)
+	fc.Result = res
+	return ec.marshalOTag2ᚕgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐTagᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_StaticTagCategory_rootTags(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "StaticTagCategory",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("FieldContext.Child cannot be called on type INTERFACE")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_StaticTagCategory_rootTags_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -5594,6 +5776,8 @@ func (ec *executionContext) _DynamicTagCategory(ctx context.Context, sel ast.Sel
 			out.Values[i] = ec._DynamicTagCategory_dynamicTags(ctx, field, obj)
 		case "format":
 			out.Values[i] = ec._DynamicTagCategory_format(ctx, field, obj)
+		case "rootTags":
+			out.Values[i] = ec._DynamicTagCategory_rootTags(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -6035,6 +6219,8 @@ func (ec *executionContext) _StaticTagCategory(ctx context.Context, sel ast.Sele
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "rootTags":
+			out.Values[i] = ec._StaticTagCategory_rootTags(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}

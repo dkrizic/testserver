@@ -67,6 +67,7 @@ interface TagCategory {
   name: String!
   parentTagCategory: TagCategory
   childTagCategories(skip: Int = 0, limit: Int = 10): [TagCategory!]
+  rootTags(skip: Int = 0, limit: Int = 10): [Tag!]
 }
 
 # Unit
@@ -77,6 +78,7 @@ type StaticTagCategory implements TagCategory{
   childTagCategories(skip: Int = 0, limit: Int = 10): [TagCategory!]
   staticTags(skip: Int = 0, limit: Int = 10): [StaticTag!]
   isOpen: Boolean!
+  rootTags(skip: Int = 0, limit: Int = 10): [Tag!]
 }
 
 type DynamicTagCategory implements TagCategory {
@@ -86,6 +88,7 @@ type DynamicTagCategory implements TagCategory {
   childTagCategories(skip: Int = 0, limit: Int = 10): [TagCategory!]
   dynamicTags(skip: Int = 0, limit: Int = 10): [DynamicTag!]
   format: String # "[0-9]{4}-[0-9]{2}-[0-9]{42}" for ISO date 2024-12-24
+  rootTags(skip: Int = 0, limit: Int = 10): [Tag!]
 }
 
 interface Tag {

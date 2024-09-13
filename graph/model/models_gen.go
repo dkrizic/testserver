@@ -23,6 +23,7 @@ type TagCategory interface {
 	GetName() string
 	GetParentTagCategory() TagCategory
 	GetChildTagCategories() []TagCategory
+	GetRootTags() []Tag
 }
 
 type Access struct {
@@ -55,6 +56,7 @@ type DynamicTagCategory struct {
 	ChildTagCategories []TagCategory `json:"childTagCategories,omitempty"`
 	DynamicTags        []*DynamicTag `json:"dynamicTags,omitempty"`
 	Format             *string       `json:"format,omitempty"`
+	RootTags           []Tag         `json:"rootTags,omitempty"`
 }
 
 func (DynamicTagCategory) IsTagCategory()                         {}
@@ -67,6 +69,16 @@ func (this DynamicTagCategory) GetChildTagCategories() []TagCategory {
 	}
 	interfaceSlice := make([]TagCategory, 0, len(this.ChildTagCategories))
 	for _, concrete := range this.ChildTagCategories {
+		interfaceSlice = append(interfaceSlice, concrete)
+	}
+	return interfaceSlice
+}
+func (this DynamicTagCategory) GetRootTags() []Tag {
+	if this.RootTags == nil {
+		return nil
+	}
+	interfaceSlice := make([]Tag, 0, len(this.RootTags))
+	for _, concrete := range this.RootTags {
 		interfaceSlice = append(interfaceSlice, concrete)
 	}
 	return interfaceSlice
@@ -107,6 +119,7 @@ type StaticTagCategory struct {
 	ChildTagCategories []TagCategory `json:"childTagCategories,omitempty"`
 	StaticTags         []*StaticTag  `json:"staticTags,omitempty"`
 	IsOpen             bool          `json:"isOpen"`
+	RootTags           []Tag         `json:"rootTags,omitempty"`
 }
 
 func (StaticTagCategory) IsTagCategory()                         {}
@@ -119,6 +132,16 @@ func (this StaticTagCategory) GetChildTagCategories() []TagCategory {
 	}
 	interfaceSlice := make([]TagCategory, 0, len(this.ChildTagCategories))
 	for _, concrete := range this.ChildTagCategories {
+		interfaceSlice = append(interfaceSlice, concrete)
+	}
+	return interfaceSlice
+}
+func (this StaticTagCategory) GetRootTags() []Tag {
+	if this.RootTags == nil {
+		return nil
+	}
+	interfaceSlice := make([]Tag, 0, len(this.RootTags))
+	for _, concrete := range this.RootTags {
 		interfaceSlice = append(interfaceSlice, concrete)
 	}
 	return interfaceSlice
