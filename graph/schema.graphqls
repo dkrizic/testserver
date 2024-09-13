@@ -104,7 +104,7 @@ type StaticTag implements Tag {
   tagCategory: StaticTagCategory!
   parentStaticTag: StaticTag
   parentTag: Tag
-  childTags(skip: Int = 0, limit: Int = 10): [Tag!]
+  childTags(skip: Int = 0, limit: Int = 10): [Tag!] @goField(forceResolver: true)
 }
 
 type DynamicTag implements Tag {
@@ -112,7 +112,7 @@ type DynamicTag implements Tag {
   tagCategory: DynamicTagCategory!
   value: String!
   parentTag: Tag
-  childTags(skip: Int = 0, limit: Int = 10): [Tag!]
+  childTags(skip: Int = 0, limit: Int = 10): [Tag!] @goField(forceResolver: true)
 }
 
 type Query {

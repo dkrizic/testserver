@@ -14,6 +14,43 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// ChildTags is the resolver for the childTags field.
+func (r *dynamicTagResolver) ChildTags(ctx context.Context, obj *model.DynamicTag, skip *int, limit *int) ([]model.Tag, error) {
+	slog.InfoContext(ctx, "ChildTags(byDynamicTag)", "id", obj.ID, "skip", skip, "limit", limit)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("db.operation.name", "select"),
+		attribute.Int("skip", *skip),
+		attribute.Int("limit", *limit))
+	span.SetAttributes(attribute.String("id", obj.ID))
+	query := "SELECT id,name,parent_tag_id,value,discriminator FROM tag WHERE parent_tag_id = ?"
+	span.SetAttributes(
+		attribute.String("db.query.text", query),
+		attribute.String("db.parameter.id", obj.ID))
+	result, err := r.dB.Query(query, obj.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	tags := []model.Tag{}
+	for result.Next() {
+		var it InternalTag
+		err := result.Scan(&it.ID, &it.Name, &it.Parent, &it.Value, &it.Discriminator)
+		if err != nil {
+			return nil, err
+		}
+		slog.DebugContext(ctx, "Scanned row", slog.Group("row", "id", it.ID, "name", it.Name, "parent", it.Parent, "value", it.Value, "discriminator", it.Discriminator))
+		tag, err := it.AsTag()
+		if err != nil {
+			return nil, err
+		}
+		tags = append(tags, tag)
+	}
+	return tags, nil
+}
+
 // ParentTagCategory is the resolver for the parentTagCategory field.
 func (r *dynamicTagCategoryResolver) ParentTagCategory(ctx context.Context, obj *model.DynamicTagCategory) (model.TagCategory, error) {
 	slog.InfoContext(ctx, "ParentTagCategory(byDynamicTagCategory)", "id", obj.ID)
@@ -361,6 +398,43 @@ func (r *queryResolver) TagCategories(ctx context.Context, skip *int, limit *int
 	return tagCategories, nil
 }
 
+// ChildTags is the resolver for the childTags field.
+func (r *staticTagResolver) ChildTags(ctx context.Context, obj *model.StaticTag, skip *int, limit *int) ([]model.Tag, error) {
+	slog.InfoContext(ctx, "ChildTags(byStaticTag)", "id", obj.ID, "skip", skip, "limit", limit)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("db.operation.name", "select"),
+		attribute.Int("skip", *skip),
+		attribute.Int("limit", *limit))
+	span.SetAttributes(attribute.String("id", obj.ID))
+	query := "SELECT id,name,parent_tag_id,value,discriminator FROM tag WHERE parent_tag_id = ?"
+	span.SetAttributes(
+		attribute.String("db.query.text", query),
+		attribute.String("db.parameter.id", obj.ID))
+	result, err := r.dB.Query(query, obj.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	tags := []model.Tag{}
+	for result.Next() {
+		var it InternalTag
+		err := result.Scan(&it.ID, &it.Name, &it.Parent, &it.Value, &it.Discriminator)
+		if err != nil {
+			return nil, err
+		}
+		slog.DebugContext(ctx, "Scanned row", slog.Group("row", "id", it.ID, "name", it.Name, "parent", it.Parent, "value", it.Value, "discriminator", it.Discriminator))
+		tag, err := it.AsTag()
+		if err != nil {
+			return nil, err
+		}
+		tags = append(tags, tag)
+	}
+	return tags, nil
+}
+
 // ParentTagCategory is the resolver for the parentTagCategory field.
 func (r *staticTagCategoryResolver) ParentTagCategory(ctx context.Context, obj *model.StaticTagCategory) (model.TagCategory, error) {
 	slog.InfoContext(ctx, "ParentTagCategory(byStaticTagCategory)", "id", obj.ID)
@@ -460,6 +534,9 @@ func (r *userResolver) Groups(ctx context.Context, obj *model.User, skip *int, l
 	return groups, nil
 }
 
+// DynamicTag returns DynamicTagResolver implementation.
+func (r *Resolver) DynamicTag() DynamicTagResolver { return &dynamicTagResolver{r} }
+
 // DynamicTagCategory returns DynamicTagCategoryResolver implementation.
 func (r *Resolver) DynamicTagCategory() DynamicTagCategoryResolver {
 	return &dynamicTagCategoryResolver{r}
@@ -471,6 +548,9 @@ func (r *Resolver) Group() GroupResolver { return &groupResolver{r} }
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
+// StaticTag returns StaticTagResolver implementation.
+func (r *Resolver) StaticTag() StaticTagResolver { return &staticTagResolver{r} }
+
 // StaticTagCategory returns StaticTagCategoryResolver implementation.
 func (r *Resolver) StaticTagCategory() StaticTagCategoryResolver {
 	return &staticTagCategoryResolver{r}
@@ -479,8 +559,10 @@ func (r *Resolver) StaticTagCategory() StaticTagCategoryResolver {
 // User returns UserResolver implementation.
 func (r *Resolver) User() UserResolver { return &userResolver{r} }
 
+type dynamicTagResolver struct{ *Resolver }
 type dynamicTagCategoryResolver struct{ *Resolver }
 type groupResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
+type staticTagResolver struct{ *Resolver }
 type staticTagCategoryResolver struct{ *Resolver }
 type userResolver struct{ *Resolver }

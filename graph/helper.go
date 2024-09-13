@@ -38,8 +38,9 @@ func (itc InternalTagCategory) AsTagCategory() (model.TagCategory, error) {
 		return tagCategory, nil
 	case DYNAMIC:
 		tagCategory := model.DynamicTagCategory{
-			ID:   itc.ID,
-			Name: itc.Name,
+			ID:     itc.ID,
+			Name:   itc.Name,
+			Format: itc.Format,
 		}
 		return tagCategory, nil
 	default:
