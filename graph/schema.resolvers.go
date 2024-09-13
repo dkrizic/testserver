@@ -7,7 +7,6 @@ package graph
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"log/slog"
 
 	"github.com/dkrizic/testserver/graph/model"
@@ -15,9 +14,39 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// ParentTagCategory is the resolver for the parentTagCategory field.
+func (r *dynamicTagCategoryResolver) ParentTagCategory(ctx context.Context, obj *model.DynamicTagCategory) (model.TagCategory, error) {
+	slog.InfoContext(ctx, "ParentTagCategory(byDynamicTagCategory)", "id", obj.ID)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("db.operation.name", "select"))
+	span.SetAttributes(attribute.String("id", obj.ID))
+	query := "SELECT p.id,p.name,p.parent,p.discriminator, p.format, p.open FROM tagcategory p, tagcategory this WHERE this.parent = p.id and this.id = ?"
+	span.SetAttributes(
+		attribute.String("db.query.text", query),
+		attribute.String("db.parameter.id", obj.ID))
+	result, err := r.dB.Query(query, obj.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	var itc InternalTagCategory
+	if result.Next() {
+		err := result.Scan(&itc.ID, &itc.Name, &itc.Parent, &itc.Discriminator, &itc.Format, &itc.Open)
+		if err != nil {
+			return nil, err
+		}
+		return itc.AsTagCategory()
+	} else {
+		return nil, nil
+	}
+}
+
 // Users is the resolver for the users field.
 func (r *groupResolver) Users(ctx context.Context, obj *model.Group, skip *int, limit *int) ([]*model.User, error) {
-	slog.Info("Users(forGroup)", "id", obj.ID, "skip", skip, "limit", limit)
+	slog.InfoContext(ctx, "Users(forGroup)", "id", obj.ID, "skip", skip, "limit", limit)
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(
 		attribute.String("db.system", "mysql"),
@@ -58,7 +87,7 @@ func (r *queryResolver) Asset(ctx context.Context, id *string, skip *int, limit 
 	if id != nil {
 		span.SetAttributes(attribute.String("id", *id))
 	}
-	slog.Info("Asset", "id", id, "skip", skip, "limit", limit)
+	slog.InfoContext(ctx, "Asset", "id", id, "skip", skip, "limit", limit)
 	var result *sql.Rows
 	var err error
 	if id != nil {
@@ -95,7 +124,7 @@ func (r *queryResolver) Asset(ctx context.Context, id *string, skip *int, limit 
 
 // User is the resolver for the user field.
 func (r *queryResolver) User(ctx context.Context, id *string, skip *int, limit *int) ([]*model.User, error) {
-	slog.Info("User", "id", id, "skip", skip, "limit", limit)
+	slog.InfoContext(ctx, "User", "id", id, "skip", skip, "limit", limit)
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(
 		attribute.String("db.system", "mysql"),
@@ -140,7 +169,7 @@ func (r *queryResolver) User(ctx context.Context, id *string, skip *int, limit *
 
 // Group is the resolver for the group field.
 func (r *queryResolver) Group(ctx context.Context, id *string, skip *int, limit *int) ([]*model.Group, error) {
-	slog.Info("Group", "id", id, "skip", skip, "limit", limit)
+	slog.InfoContext(ctx, "Group", "id", id, "skip", skip, "limit", limit)
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(
 		attribute.String("db.system", "mysql"),
@@ -233,15 +262,6 @@ func (r *queryResolver) Identity(ctx context.Context, skip *int, limit *int) ([]
 
 // TagCategory is the resolver for the tagCategory field.
 func (r *queryResolver) TagCategory(ctx context.Context, id *string) (model.TagCategory, error) {
-	type MergedTagCategory struct {
-		ID            string
-		Name          string
-		Discriminator string
-		Parent        string
-		Format        string
-		Open          bool
-	}
-
 	slog.InfoContext(ctx, "TagCategory", "id", id)
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(
@@ -259,43 +279,18 @@ func (r *queryResolver) TagCategory(ctx context.Context, id *string) (model.TagC
 	}
 	defer result.Close()
 
-	var mergedTagCategory MergedTagCategory
+	var itc InternalTagCategory
 	for result.Next() {
-		err := result.Scan(&mergedTagCategory.ID, &mergedTagCategory.Name, &mergedTagCategory.Discriminator, &mergedTagCategory.Parent, &mergedTagCategory.Format, &mergedTagCategory.Open)
+		err := result.Scan(&itc.ID, &itc.Name, &itc.Discriminator, &itc.Parent, &itc.Format, &itc.Open)
 		if err != nil {
 			return nil, err
 		}
 	}
-
-	switch mergedTagCategory.Discriminator {
-	case "static":
-		return model.StaticTagCategory{
-			ID:     mergedTagCategory.ID,
-			Name:   mergedTagCategory.Name,
-			IsOpen: mergedTagCategory.Open,
-		}, nil
-	case "dynamic":
-		return model.DynamicTagCategory{
-			ID:     mergedTagCategory.ID,
-			Name:   mergedTagCategory.Name,
-			Format: mergedTagCategory.Format,
-		}, nil
-	default:
-		return nil, fmt.Errorf("unknown tag category discriminator: %s", mergedTagCategory.Discriminator)
-	}
+	return itc.AsTagCategory()
 }
 
 // TagCategories is the resolver for the tagCategories field.
 func (r *queryResolver) TagCategories(ctx context.Context, skip *int, limit *int) ([]model.TagCategory, error) {
-	type MergedTagCategory struct {
-		ID            string
-		Name          string
-		Discriminator string
-		Parent        *string
-		Format        *string
-		Open          bool
-	}
-
 	slog.InfoContext(ctx, "TagCategories", "skip", skip, "limit", limit)
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(
@@ -313,36 +308,54 @@ func (r *queryResolver) TagCategories(ctx context.Context, skip *int, limit *int
 
 	tagCategories := []model.TagCategory{}
 	for result.Next() {
-		var mergedTagCategory MergedTagCategory
-		err := result.Scan(&mergedTagCategory.ID, &mergedTagCategory.Name, &mergedTagCategory.Discriminator, &mergedTagCategory.Parent, &mergedTagCategory.Format, &mergedTagCategory.Open)
+		var itc InternalTagCategory
+		err := result.Scan(&itc.ID, &itc.Name, &itc.Discriminator, &itc.Parent, &itc.Format, &itc.Open)
 		if err != nil {
 			return nil, err
 		}
-
-		switch mergedTagCategory.Discriminator {
-		case "static":
-			tagCategories = append(tagCategories, model.StaticTagCategory{
-				ID:     mergedTagCategory.ID,
-				Name:   mergedTagCategory.Name,
-				IsOpen: mergedTagCategory.Open,
-			})
-		case "dynamic":
-			tagCategories = append(tagCategories, model.DynamicTagCategory{
-				ID:     mergedTagCategory.ID,
-				Name:   mergedTagCategory.Name,
-				Format: *mergedTagCategory.Format,
-			})
-		default:
-			return nil, fmt.Errorf("unknown tag category discriminator: %s", mergedTagCategory.Discriminator)
+		tagCategory, err := itc.AsTagCategory()
+		if err != nil {
+			return nil, err
 		}
+		tagCategories = append(tagCategories, tagCategory)
 	}
 
 	return tagCategories, nil
 }
 
+// ParentTagCategory is the resolver for the parentTagCategory field.
+func (r *staticTagCategoryResolver) ParentTagCategory(ctx context.Context, obj *model.StaticTagCategory) (model.TagCategory, error) {
+	slog.InfoContext(ctx, "ParentTagCategory(byStaticTagCategory)", "id", obj.ID)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("db.operation.name", "select"))
+	span.SetAttributes(attribute.String("id", obj.ID))
+	query := "SELECT p.id,p.name,p.parent,p.discriminator, p.format, p.open FROM tagcategory p, tagcategory this WHERE this.parent = p.id and this.id = ?"
+	span.SetAttributes(
+		attribute.String("db.query.text", query),
+		attribute.String("db.parameter.id", obj.ID))
+	result, err := r.dB.Query(query, obj.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	if result.Next() {
+		var itc InternalTagCategory
+		err := result.Scan(&itc.ID, &itc.Name, &itc.Parent, &itc.Discriminator, &itc.Format, &itc.Open)
+		if err != nil {
+			return nil, err
+		}
+		return itc.AsTagCategory()
+	} else {
+		return nil, nil
+	}
+}
+
 // Groups is the resolver for the groups field.
 func (r *userResolver) Groups(ctx context.Context, obj *model.User, skip *int, limit *int) ([]*model.Group, error) {
-	slog.Info("Groups(forUser)", "id", obj.ID, "skip", skip, "limit", limit)
+	slog.InfoContext(ctx, "Groups(forUser)", "id", obj.ID, "skip", skip, "limit", limit)
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(
 		attribute.String("db.system", "mysql"),
@@ -372,24 +385,27 @@ func (r *userResolver) Groups(ctx context.Context, obj *model.User, skip *int, l
 	return groups, nil
 }
 
+// DynamicTagCategory returns DynamicTagCategoryResolver implementation.
+func (r *Resolver) DynamicTagCategory() DynamicTagCategoryResolver {
+	return &dynamicTagCategoryResolver{r}
+}
+
 // Group returns GroupResolver implementation.
 func (r *Resolver) Group() GroupResolver { return &groupResolver{r} }
 
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
+// StaticTagCategory returns StaticTagCategoryResolver implementation.
+func (r *Resolver) StaticTagCategory() StaticTagCategoryResolver {
+	return &staticTagCategoryResolver{r}
+}
+
 // User returns UserResolver implementation.
 func (r *Resolver) User() UserResolver { return &userResolver{r} }
 
+type dynamicTagCategoryResolver struct{ *Resolver }
 type groupResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
+type staticTagCategoryResolver struct{ *Resolver }
 type userResolver struct{ *Resolver }
-
-// !!! WARNING !!!
-// The code below was going to be deleted when updating resolvers. It has been copied here so you have
-// one last chance to move it out of harms way if you want. There are two reasons this happens:
-//   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
-//     it when you're done.
-//   - You have helper methods in this file. Move them out to keep these resolver files clean.
-type mutationResolver struct{ *Resolver }
-type tagResolver struct{ *Resolver }

@@ -2,6 +2,16 @@
 #
 # https://gqlgen.com/getting-started/
 
+directive @goModel(model: String, models: [String!]) on OBJECT
+  | INPUT_OBJECT
+  | SCALAR
+  | ENUM
+  | INTERFACE
+  | UNION
+
+directive @goField(forceResolver: Boolean, name: String, omittable: Boolean) on INPUT_FIELD_DEFINITION
+  | FIELD_DEFINITION
+
 # type Identity is either User or Group
 union Identity = User | Group
 
@@ -63,7 +73,7 @@ interface TagCategory {
 type StaticTagCategory implements TagCategory{
   id: ID!
   name: String!
-  parentTagCategory: TagCategory
+  parentTagCategory: TagCategory @goField(forceResolver: true)
   childTagCategories(skip: Int = 0, limit: Int = 10): [TagCategory!]
   staticTags(skip: Int = 0, limit: Int = 10): [StaticTag!]
   isOpen: Boolean!
@@ -72,10 +82,10 @@ type StaticTagCategory implements TagCategory{
 type DynamicTagCategory implements TagCategory {
   id: ID!
   name: String!
-  parentTagCategory: TagCategory
+  parentTagCategory: TagCategory @goField(forceResolver: true)
   childTagCategories(skip: Int = 0, limit: Int = 10): [TagCategory!]
   dynamicTags(skip: Int = 0, limit: Int = 10): [DynamicTag!]
-  format: String! # "[0-9]{4}-[0-9]{2}-[0-9]{42}" for ISO date 2024-12-24
+  format: String # "[0-9]{4}-[0-9]{2}-[0-9]{42}" for ISO date 2024-12-24
 }
 
 interface Tag {

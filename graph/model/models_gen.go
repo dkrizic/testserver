@@ -54,7 +54,7 @@ type DynamicTagCategory struct {
 	ParentTagCategory  TagCategory   `json:"parentTagCategory,omitempty"`
 	ChildTagCategories []TagCategory `json:"childTagCategories,omitempty"`
 	DynamicTags        []*DynamicTag `json:"dynamicTags,omitempty"`
-	Format             string        `json:"format"`
+	Format             *string       `json:"format,omitempty"`
 }
 
 func (DynamicTagCategory) IsTagCategory()                         {}

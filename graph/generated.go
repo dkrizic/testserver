@@ -39,8 +39,10 @@ type Config struct {
 }
 
 type ResolverRoot interface {
+	DynamicTagCategory() DynamicTagCategoryResolver
 	Group() GroupResolver
 	Query() QueryResolver
+	StaticTagCategory() StaticTagCategoryResolver
 	User() UserResolver
 }
 
@@ -123,6 +125,9 @@ type ComplexityRoot struct {
 	}
 }
 
+type DynamicTagCategoryResolver interface {
+	ParentTagCategory(ctx context.Context, obj *model.DynamicTagCategory) (model.TagCategory, error)
+}
 type GroupResolver interface {
 	Users(ctx context.Context, obj *model.Group, skip *int, limit *int) ([]*model.User, error)
 }
@@ -133,6 +138,9 @@ type QueryResolver interface {
 	Identity(ctx context.Context, skip *int, limit *int) ([]model.Identity, error)
 	TagCategory(ctx context.Context, id *string) (model.TagCategory, error)
 	TagCategories(ctx context.Context, skip *int, limit *int) ([]model.TagCategory, error)
+}
+type StaticTagCategoryResolver interface {
+	ParentTagCategory(ctx context.Context, obj *model.StaticTagCategory) (model.TagCategory, error)
 }
 type UserResolver interface {
 	Groups(ctx context.Context, obj *model.User, skip *int, limit *int) ([]*model.Group, error)
@@ -1807,7 +1815,7 @@ func (ec *executionContext) _DynamicTagCategory_parentTagCategory(ctx context.Co
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.ParentTagCategory, nil
+		return ec.resolvers.DynamicTagCategory().ParentTagCategory(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1825,8 +1833,8 @@ func (ec *executionContext) fieldContext_DynamicTagCategory_parentTagCategory(_ 
 	fc = &graphql.FieldContext{
 		Object:     "DynamicTagCategory",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("FieldContext.Child cannot be called on type INTERFACE")
 		},
@@ -1967,14 +1975,11 @@ func (ec *executionContext) _DynamicTagCategory_format(ctx context.Context, fiel
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(*string)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_DynamicTagCategory_format(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3132,7 +3137,7 @@ func (ec *executionContext) _StaticTagCategory_parentTagCategory(ctx context.Con
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.ParentTagCategory, nil
+		return ec.resolvers.StaticTagCategory().ParentTagCategory(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3150,8 +3155,8 @@ func (ec *executionContext) fieldContext_StaticTagCategory_parentTagCategory(_ c
 	fc = &graphql.FieldContext{
 		Object:     "StaticTagCategory",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("FieldContext.Child cannot be called on type INTERFACE")
 		},
@@ -5543,24 +5548,52 @@ func (ec *executionContext) _DynamicTagCategory(ctx context.Context, sel ast.Sel
 		case "id":
 			out.Values[i] = ec._DynamicTagCategory_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "name":
 			out.Values[i] = ec._DynamicTagCategory_name(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "parentTagCategory":
-			out.Values[i] = ec._DynamicTagCategory_parentTagCategory(ctx, field, obj)
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._DynamicTagCategory_parentTagCategory(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "childTagCategories":
 			out.Values[i] = ec._DynamicTagCategory_childTagCategories(ctx, field, obj)
 		case "dynamicTags":
 			out.Values[i] = ec._DynamicTagCategory_dynamicTags(ctx, field, obj)
 		case "format":
 			out.Values[i] = ec._DynamicTagCategory_format(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -5953,15 +5986,46 @@ func (ec *executionContext) _StaticTagCategory(ctx context.Context, sel ast.Sele
 		case "id":
 			out.Values[i] = ec._StaticTagCategory_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "name":
 			out.Values[i] = ec._StaticTagCategory_name(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "parentTagCategory":
-			out.Values[i] = ec._StaticTagCategory_parentTagCategory(ctx, field, obj)
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._StaticTagCategory_parentTagCategory(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "childTagCategories":
 			out.Values[i] = ec._StaticTagCategory_childTagCategories(ctx, field, obj)
 		case "staticTags":
@@ -5969,7 +6033,7 @@ func (ec *executionContext) _StaticTagCategory(ctx context.Context, sel ast.Sele
 		case "isOpen":
 			out.Values[i] = ec._StaticTagCategory_isOpen(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -7358,6 +7422,44 @@ func (ec *executionContext) marshalOStaticTag2ᚖgithubᚗcomᚋdkrizicᚋtestse
 		return graphql.Null
 	}
 	return ec._StaticTag(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOString2ᚕstringᚄ(ctx context.Context, v interface{}) ([]string, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []interface{}
+	if v != nil {
+		vSlice = graphql.CoerceList(v)
+	}
+	var err error
+	res := make([]string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNString2string(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalOString2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNString2string(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalOString2ᚖstring(ctx context.Context, v interface{}) (*string, error) {
