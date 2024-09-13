@@ -47,156 +47,6 @@ func (r *groupResolver) Users(ctx context.Context, obj *model.Group, skip *int, 
 	return users, nil
 }
 
-// CreateTag is the resolver for the createTag field.
-func (r *mutationResolver) CreateTag(ctx context.Context, tagName string) (*model.Tag, error) {
-	slog.Info("Create tag", "name", tagName)
-	result, err := r.dB.Exec("INSERT INTO tag (name) VALUES (?)", tagName)
-	if err != nil {
-		return nil, err
-	}
-	id, err := result.LastInsertId()
-	if err != nil {
-		return nil, err
-	}
-	return &model.Tag{ID: fmt.Sprintf("%d", id), Name: tagName}, nil
-}
-
-// CreateAsset is the resolver for the createAsset field.
-func (r *mutationResolver) CreateAsset(ctx context.Context, assetName string) (*model.Asset, error) {
-	slog.Info("Create asset", "name", assetName)
-	result, err := r.dB.Exec("INSERT INTO asset (name) VALUES (?)", assetName)
-	if err != nil {
-		return nil, err
-	}
-	id, err := result.LastInsertId()
-	if err != nil {
-		return nil, err
-	}
-	return &model.Asset{ID: fmt.Sprintf("%d", id), Name: assetName}, nil
-}
-
-// AddGroup is the resolver for the addGroup field.
-func (r *mutationResolver) AddGroup(ctx context.Context, name string) (*model.Group, error) {
-	slog.Info("Add group", "name", name)
-	result, err := r.dB.Exec("INSERT INTO `group` (name) VALUES (?)", name)
-	if err != nil {
-		return nil, err
-	}
-	id, err := result.LastInsertId()
-	if err != nil {
-		return nil, err
-	}
-	return &model.Group{ID: fmt.Sprintf("%d", id), Name: name}, nil
-}
-
-// AddUser is the resolver for the addUser field.
-func (r *mutationResolver) AddUser(ctx context.Context, email string) (*model.User, error) {
-	slog.Info("Add user", "email", email)
-	result, err := r.dB.Exec("INSERT INTO user (email) VALUES (?)", email)
-	if err != nil {
-		return nil, err
-	}
-	id, err := result.LastInsertId()
-	if err != nil {
-		return nil, err
-	}
-	return &model.User{ID: fmt.Sprintf("%d", id), Email: email}, nil
-}
-
-// AddUsertoGroup is the resolver for the addUsertoGroup field.
-func (r *mutationResolver) AddUsertoGroup(ctx context.Context, userID string, groupID string) (*model.Group, error) {
-	slog.Info("Add user to group", "userID", userID, "groupID", groupID)
-	result, err := r.dB.Exec("INSERT INTO user_group (user_id,group_id) VALUES (?,?)", userID, groupID)
-	if err != nil {
-		return nil, err
-	}
-	id, err := result.LastInsertId()
-	if err != nil {
-		return nil, err
-	}
-	return &model.Group{ID: fmt.Sprintf("%d", id)}, nil
-}
-
-// RemoveUserFromGroup is the resolver for the removeUserFromGroup field.
-func (r *mutationResolver) RemoveUserFromGroup(ctx context.Context, userID string, groupID string) (*model.Group, error) {
-	slog.Info("Remove user from group", "userID", userID, "groupID", groupID)
-	_, err := r.dB.Exec("DELETE FROM user_group WHERE user_id = ? AND group_id = ?", userID, groupID)
-	if err != nil {
-		return nil, err
-	}
-
-	slog.Debug("Loading group", "id", groupID)
-	result, err := r.dB.Query("SELECT id,name FROM `group` WHERE id = ?", groupID)
-	if err != nil {
-		return nil, err
-	}
-	defer result.Close()
-
-	var group model.Group
-	for result.Next() {
-		err := result.Scan(&group.ID, &group.Name)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return &group, nil
-}
-
-// AssignPermission is the resolver for the assignPermission field.
-func (r *mutationResolver) AssignPermission(ctx context.Context, identityID string, assetID string, permission model.Permission) (*model.Assignment, error) {
-	panic(fmt.Errorf("not implemented: AssignPermission - assignPermission"))
-}
-
-// RemovePermission is the resolver for the removePermission field.
-func (r *mutationResolver) RemovePermission(ctx context.Context, identityID string, assetID string) (*model.Assignment, error) {
-	panic(fmt.Errorf("not implemented: RemovePermission - removePermission"))
-}
-
-// Tag is the resolver for the tag field.
-func (r *queryResolver) Tag(ctx context.Context, id *string, skip *int, limit *int) ([]*model.Tag, error) {
-	span := trace.SpanFromContext(ctx)
-	if id != nil {
-		span.SetAttributes(attribute.String("id", *id))
-	}
-	slog.Info("Tag", "id", id, "skip", skip, "limit", limit)
-	var result *sql.Rows
-	var err error
-	span.SetAttributes(
-		attribute.String("db.system", "mysql"),
-		attribute.String("db.operation.name", "select"),
-		attribute.Int("skip", *skip),
-		attribute.Int("limit", *limit))
-	if id != nil {
-		query := "SELECT id,name FROM tag WHERE id = ?"
-		span.SetAttributes(
-			attribute.String("db.query.text", query),
-			attribute.String("db.query.parameter.id", *id))
-		result, err = r.dB.Query(query, *id)
-	} else {
-		query := "SELECT id,name FROM tag LIMIT ?,?"
-		span.SetAttributes(attribute.String("db.query.text", query))
-		result, err = r.dB.Query(query, *skip, *limit)
-	}
-	if err != nil {
-		slog.WarnContext(ctx, "Error querying database", "error", err)
-		return nil, err
-	}
-	defer result.Close()
-
-	tags := []*model.Tag{}
-	for result.Next() {
-		var tag model.Tag
-		err := result.Scan(&tag.ID, &tag.Name)
-		if err != nil {
-			return nil, err
-		}
-		tags = append(tags, &tag)
-	}
-	span.SetAttributes(attribute.Int("tags.count", len(tags)))
-	return tags, nil
-}
-
 // Asset is the resolver for the asset field.
 func (r *queryResolver) Asset(ctx context.Context, id *string, skip *int, limit *int) ([]*model.Asset, error) {
 	span := trace.SpanFromContext(ctx)
@@ -381,39 +231,14 @@ func (r *queryResolver) Identity(ctx context.Context, skip *int, limit *int) ([]
 	return identities, nil
 }
 
-// Assets is the resolver for the assets field.
-func (r *tagResolver) Assets(ctx context.Context, obj *model.Tag, skip *int, limit *int) ([]*model.Asset, error) {
-	span := trace.SpanFromContext(ctx)
-	span.SetAttributes(
-		attribute.String("id", obj.ID),
-		attribute.Int("limit", *limit),
-		attribute.Int("skip", *skip))
-	slog.DebugContext(ctx, "Assets(byTag)", "id", obj.ID, "skip", skip, "limit", limit)
-	span.SetAttributes(
-		attribute.String("db.system", "mysql"),
-		attribute.String("db.operation.name", "select"))
+// TagCategory is the resolver for the tagCategory field.
+func (r *queryResolver) TagCategory(ctx context.Context, id *string) (model.TagCategory, error) {
+	panic(fmt.Errorf("not implemented: TagCategory - tagCategory"))
+}
 
-	query := "SELECT DISTINCT asset.id,asset.name FROM asset,tagvalue WHERE asset.id = tagvalue.asset_id and tagvalue.tag_id = ? limit ?,?"
-	span.SetAttributes(
-		attribute.String("db.query.text", query),
-		attribute.String("db.parameter.id", obj.ID))
-	result, err := r.dB.Query(query, obj.ID, skip, limit)
-	if err != nil {
-		return nil, err
-	}
-	defer result.Close()
-
-	assets := []*model.Asset{}
-	for result.Next() {
-		var asset model.Asset
-		err := result.Scan(&asset.ID, &asset.Name)
-		if err != nil {
-			return nil, err
-		}
-		assets = append(assets, &asset)
-	}
-	span.SetAttributes(attribute.Int("assets.count", len(assets)))
-	return assets, nil
+// TagCategories is the resolver for the tagCategories field.
+func (r *queryResolver) TagCategories(ctx context.Context, skip *int, limit *int) ([]model.TagCategory, error) {
+	panic(fmt.Errorf("not implemented: TagCategories - tagCategories"))
 }
 
 // Groups is the resolver for the groups field.
@@ -451,20 +276,15 @@ func (r *userResolver) Groups(ctx context.Context, obj *model.User, skip *int, l
 // Group returns GroupResolver implementation.
 func (r *Resolver) Group() GroupResolver { return &groupResolver{r} }
 
-// Mutation returns MutationResolver implementation.
-func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
-
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
-
-// Tag returns TagResolver implementation.
-func (r *Resolver) Tag() TagResolver { return &tagResolver{r} }
 
 // User returns UserResolver implementation.
 func (r *Resolver) User() UserResolver { return &userResolver{r} }
 
 type groupResolver struct{ *Resolver }
-type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
-type tagResolver struct{ *Resolver }
 type userResolver struct{ *Resolver }
+
+type mutationResolver struct{ *Resolver }
+type tagResolver struct{ *Resolver }

@@ -42,6 +42,8 @@ type Asset {
   name: String!
   permissions(skip: Int = 0, limit: Int = 10): [Access!]
   files(skip: Int = 0, limit: Int = 10): [File!]
+  tags(skip: Int = 0, limit: Int = 10): [Tag!]
+  # Mobile
 }
 
 type File {
@@ -52,66 +54,45 @@ type File {
 
 interface TagCategory {
   id: ID!
-  label: String!
-  staticTags: [StaticTag]!
-  valueType: ValueType!
+  name: String!
+  parentTageCateogry: TagCategory
+  childTagCategories(skip: Int = 0, limit: Int = 10): [TagCategory!]
 }
 
-type RootTagCategory implements TagCategory {
+# Unit
+type StaticTagCategory implements TagCategory{
   id: ID!
-  label: String!
-  staticTags: [StaticTag]!
-  children: [ChildTagCategory]
-  valueType: ValueType!
+  name: String!
+  parentTageCateogry: TagCategory
+  childTagCategories(skip: Int = 0, limit: Int = 10): [TagCategory!]
+  staticTags(skip: Int = 0, limit: Int = 10): [StaticTag!]
+  isOpen: Boolean!
 }
 
-type ChildTagCategory implements TagCategory {
+type DynamicTagCategory implements TagCategory {
   id: ID!
-  label: String!
-  staticTags: [StaticTag]!
-  parent: TagCategory!
-  children: [ChildTagCategory]
-  valueType: ValueType!
-  tags: [Tag]!
+  name: String!
+  parentTageCateogry: TagCategory
+  childTagCategories(skip: Int = 0, limit: Int = 10): [TagCategory!]
+  dynamicTags(skip: Int = 0, limit: Int = 10): [DynamicTag!]
+  format: String! # "[0-9]{4}-[0-9]{2}-[0-9]{42}" for ISO date 2024-12-24
 }
 
-interface StaticTag {
+interface Tag {
   id: ID!
-  label: String!
-  category: TagCategory!
-  isDeleted: Boolean!
-  tagCategory: TagCategory!
 }
 
-type RootStaticTag implements StaticTag {
+# Mobile
+type StaticTag implements Tag {
   id: ID!
-  label: String!
-  category: TagCategory!
-  isDeleted: Boolean!
-  children: [ChildStaticTag]
-  tagCategory: TagCategory!
+  name: String!
+  tagCategory: StaticTagCategory!
+  parentStaticTag: StaticTag
 }
 
-type ChildStaticTag implements StaticTag {
+type DynamicTag implements Tag {
   id: ID!
-  label: String!
-  category: TagCategory!
-  isDeleted: Boolean!
-  parent: StaticTag!
-  tagCategory: TagCategory!
-}
-
-enum ValueType {
-  STATIC
-  STRING
-  NUMERIC
-  BOOLEAN
-}
-
-type Tag {
-  id: ID!
-  tagCategory: TagCategory!
-  asset: Asset!
+  tagCategory: DynamicTagCategory!
   value: String!
 }
 
@@ -121,6 +102,8 @@ type Query {
   group(id:ID, skip: Int = 0, limit: Int = 10): [Group!]!
   identity(skip: Int = 0, limit: Int = 10): [Identity!]!
   tagCategory(id: ID): TagCategory
+  tagCategories(skip: Int = 0, limit: Int = 10): [TagCategory!]
+
 }
 
 

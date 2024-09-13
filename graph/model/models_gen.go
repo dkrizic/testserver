@@ -12,15 +12,70 @@ type Identity interface {
 	IsIdentity()
 }
 
-type Asset struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+type Tag interface {
+	IsTag()
+	GetID() string
 }
 
-type Assignment struct {
+type TagCategory interface {
+	IsTagCategory()
+	GetID() string
+	GetName() string
+	GetParentTageCateogry() TagCategory
+	GetChildTagCategories() []TagCategory
+}
+
+type Access struct {
 	Identity   Identity   `json:"identity"`
 	Permission Permission `json:"permission"`
 	Asset      *Asset     `json:"asset"`
+}
+
+type Asset struct {
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	Permissions []*Access `json:"permissions,omitempty"`
+	Files       []*File   `json:"files,omitempty"`
+	Tags        []Tag     `json:"tags,omitempty"`
+}
+
+type DynamicTag struct {
+	ID          string              `json:"id"`
+	TagCategory *DynamicTagCategory `json:"tagCategory"`
+	Value       string              `json:"value"`
+}
+
+func (DynamicTag) IsTag()             {}
+func (this DynamicTag) GetID() string { return this.ID }
+
+type DynamicTagCategory struct {
+	ID                 string        `json:"id"`
+	Name               string        `json:"name"`
+	ParentTageCateogry TagCategory   `json:"parentTageCateogry,omitempty"`
+	ChildTagCategories []TagCategory `json:"childTagCategories,omitempty"`
+	DynamicTags        []*DynamicTag `json:"dynamicTags,omitempty"`
+	Format             string        `json:"format"`
+}
+
+func (DynamicTagCategory) IsTagCategory()                          {}
+func (this DynamicTagCategory) GetID() string                      { return this.ID }
+func (this DynamicTagCategory) GetName() string                    { return this.Name }
+func (this DynamicTagCategory) GetParentTageCateogry() TagCategory { return this.ParentTageCateogry }
+func (this DynamicTagCategory) GetChildTagCategories() []TagCategory {
+	if this.ChildTagCategories == nil {
+		return nil
+	}
+	interfaceSlice := make([]TagCategory, 0, len(this.ChildTagCategories))
+	for _, concrete := range this.ChildTagCategories {
+		interfaceSlice = append(interfaceSlice, concrete)
+	}
+	return interfaceSlice
+}
+
+type File struct {
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	Asset *Asset `json:"asset"`
 }
 
 type Group struct {
@@ -32,16 +87,40 @@ type Group struct {
 
 func (Group) IsIdentity() {}
 
-type Mutation struct {
-}
-
 type Query struct {
 }
 
-type Tag struct {
-	ID     string   `json:"id"`
-	Name   string   `json:"name"`
-	Assets []*Asset `json:"assets"`
+type StaticTag struct {
+	ID          string             `json:"id"`
+	Name        string             `json:"name"`
+	TagCategory *StaticTagCategory `json:"tagCategory"`
+}
+
+func (StaticTag) IsTag()             {}
+func (this StaticTag) GetID() string { return this.ID }
+
+type StaticTagCategory struct {
+	ID                 string        `json:"id"`
+	Name               string        `json:"name"`
+	ParentTageCateogry TagCategory   `json:"parentTageCateogry,omitempty"`
+	ChildTagCategories []TagCategory `json:"childTagCategories,omitempty"`
+	StaticTags         []*StaticTag  `json:"staticTags,omitempty"`
+	IsOpen             bool          `json:"isOpen"`
+}
+
+func (StaticTagCategory) IsTagCategory()                          {}
+func (this StaticTagCategory) GetID() string                      { return this.ID }
+func (this StaticTagCategory) GetName() string                    { return this.Name }
+func (this StaticTagCategory) GetParentTageCateogry() TagCategory { return this.ParentTageCateogry }
+func (this StaticTagCategory) GetChildTagCategories() []TagCategory {
+	if this.ChildTagCategories == nil {
+		return nil
+	}
+	interfaceSlice := make([]TagCategory, 0, len(this.ChildTagCategories))
+	for _, concrete := range this.ChildTagCategories {
+		interfaceSlice = append(interfaceSlice, concrete)
+	}
+	return interfaceSlice
 }
 
 type User struct {
@@ -97,20 +176,20 @@ func (e Permission) MarshalGQL(w io.Writer) {
 type PermissionQuery string
 
 const (
-	PermissionQueryRead  PermissionQuery = "READ"
-	PermissionQueryWrite PermissionQuery = "WRITE"
-	PermissionQueryAll   PermissionQuery = "ALL"
+	PermissionQueryRead        PermissionQuery = "READ"
+	PermissionQueryWrite       PermissionQuery = "WRITE"
+	PermissionQueryReadOrWrite PermissionQuery = "READ_OR_WRITE"
 )
 
 var AllPermissionQuery = []PermissionQuery{
 	PermissionQueryRead,
 	PermissionQueryWrite,
-	PermissionQueryAll,
+	PermissionQueryReadOrWrite,
 }
 
 func (e PermissionQuery) IsValid() bool {
 	switch e {
-	case PermissionQueryRead, PermissionQueryWrite, PermissionQueryAll:
+	case PermissionQueryRead, PermissionQueryWrite, PermissionQueryReadOrWrite:
 		return true
 	}
 	return false
