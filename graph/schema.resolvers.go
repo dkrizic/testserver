@@ -44,6 +44,44 @@ func (r *dynamicTagCategoryResolver) ParentTagCategory(ctx context.Context, obj 
 	}
 }
 
+// RootTags is the resolver for the rootTags field.
+func (r *dynamicTagCategoryResolver) RootTags(ctx context.Context, obj *model.DynamicTagCategory, skip *int, limit *int) ([]model.Tag, error) {
+	slog.InfoContext(ctx, "RootTags(byDynamicTagCategory)", "id", obj.ID, "skip", skip, "limit", limit)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("db.operation.name", "select"),
+		attribute.Int("skip", *skip),
+		attribute.Int("limit", *limit))
+	span.SetAttributes(attribute.String("id", obj.ID))
+	query := "SELECT id,name,parent_tag_id,value,discriminator FROM tag WHERE parent_tag_id is null and tagcategory_id = ? limit ?,?"
+	span.SetAttributes(
+		attribute.String("db.query.text", query),
+		attribute.String("db.parameter.id", obj.ID))
+	result, err := r.dB.Query(query, obj.ID, skip, limit)
+	if err != nil {
+		return nil, nil
+	}
+	defer result.Close()
+
+	tags := []model.Tag{}
+	for result.Next() {
+		var it InternalTag
+		err := result.Scan(&it.ID, &it.Name, &it.Parent, &it.Value, &it.Discriminator)
+		if err != nil {
+			return nil, err
+		}
+		slog.DebugContext(ctx, "Scanned row", slog.Group("row", "id", it.ID, "name", it.Name, "parent", it.Parent, "value", it.Value, "discriminator", it.Discriminator))
+		tag, err := it.AsTag()
+		if err != nil {
+			return nil, err
+		}
+		tags = append(tags, tag)
+	}
+
+	return tags, nil
+}
+
 // Users is the resolver for the users field.
 func (r *groupResolver) Users(ctx context.Context, obj *model.Group, skip *int, limit *int) ([]*model.User, error) {
 	slog.InfoContext(ctx, "Users(forGroup)", "id", obj.ID, "skip", skip, "limit", limit)
@@ -351,6 +389,43 @@ func (r *staticTagCategoryResolver) ParentTagCategory(ctx context.Context, obj *
 	} else {
 		return nil, nil
 	}
+}
+
+// RootTags is the resolver for the rootTags field.
+func (r *staticTagCategoryResolver) RootTags(ctx context.Context, obj *model.StaticTagCategory, skip *int, limit *int) ([]model.Tag, error) {
+	slog.InfoContext(ctx, "RootTags(byStaticTageCategory)", "id", obj.ID, "skip", skip, "limit", limit)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("db.operation.name", "select"),
+		attribute.Int("skip", *skip),
+		attribute.Int("limit", *limit))
+	span.SetAttributes(attribute.String("id", obj.ID))
+	query := "SELECT id,name,parent_tag_id,value,discriminator FROM tag WHERE parent_tag_id is null and tagcategory_id = ? limit ?,?"
+	span.SetAttributes(
+		attribute.String("db.query.text", query),
+		attribute.String("db.parameter.id", obj.ID))
+	result, err := r.dB.Query(query, obj.ID, skip, limit)
+	if err != nil {
+		return nil, nil
+	}
+	defer result.Close()
+
+	tags := []model.Tag{}
+	for result.Next() {
+		var it InternalTag
+		err := result.Scan(&it.ID, &it.Name, &it.Parent, &it.Value, &it.Discriminator)
+		if err != nil {
+			return nil, err
+		}
+		slog.DebugContext(ctx, "Scanned row", slog.Group("row", "id", it.ID, "name", it.Name, "parent", it.Parent, "value", it.Value, "discriminator", it.Discriminator))
+		tag, err := it.AsTag()
+		if err != nil {
+			return nil, err
+		}
+		tags = append(tags, tag)
+	}
+	return tags, nil
 }
 
 // Groups is the resolver for the groups field.

@@ -5,6 +5,11 @@ import (
 	"github.com/dkrizic/testserver/graph/model"
 )
 
+const (
+	STATIC  = "static"
+	DYNAMIC = "dynamic"
+)
+
 type InternalTagCategory struct {
 	ID            string
 	Name          string
@@ -14,10 +19,13 @@ type InternalTagCategory struct {
 	Open          bool
 }
 
-const (
-	STATIC  = "static"
-	DYNAMIC = "dynamic"
-)
+type InternalTag struct {
+	ID            string
+	Name          string
+	Discriminator string
+	Parent        *string
+	Value         *string
+}
 
 func (itc InternalTagCategory) AsTagCategory() (model.TagCategory, error) {
 	switch itc.Discriminator {
@@ -28,7 +36,7 @@ func (itc InternalTagCategory) AsTagCategory() (model.TagCategory, error) {
 			IsOpen: itc.Open,
 		}
 		return tagCategory, nil
-	case "dynamic":
+	case DYNAMIC:
 		tagCategory := model.DynamicTagCategory{
 			ID:   itc.ID,
 			Name: itc.Name,
@@ -36,5 +44,26 @@ func (itc InternalTagCategory) AsTagCategory() (model.TagCategory, error) {
 		return tagCategory, nil
 	default:
 		return nil, fmt.Errorf("unknown tag category discriminator: %s", itc.Discriminator)
+	}
+}
+
+func (it InternalTag) AsTag() (model.Tag, error) {
+	switch it.Discriminator {
+	case STATIC:
+		tag := model.StaticTag{
+			ID:   it.ID,
+			Name: it.Name,
+		}
+		return tag, nil
+	case DYNAMIC:
+		tag := model.DynamicTag{
+			ID: it.ID,
+		}
+		if it.Value != nil {
+			tag.Value = *it.Value
+		}
+		return tag, nil
+	default:
+		return nil, fmt.Errorf("unknown tag discriminator: %s", it.Discriminator)
 	}
 }

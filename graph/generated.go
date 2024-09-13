@@ -129,6 +129,8 @@ type ComplexityRoot struct {
 
 type DynamicTagCategoryResolver interface {
 	ParentTagCategory(ctx context.Context, obj *model.DynamicTagCategory) (model.TagCategory, error)
+
+	RootTags(ctx context.Context, obj *model.DynamicTagCategory, skip *int, limit *int) ([]model.Tag, error)
 }
 type GroupResolver interface {
 	Users(ctx context.Context, obj *model.Group, skip *int, limit *int) ([]*model.User, error)
@@ -143,6 +145,8 @@ type QueryResolver interface {
 }
 type StaticTagCategoryResolver interface {
 	ParentTagCategory(ctx context.Context, obj *model.StaticTagCategory) (model.TagCategory, error)
+
+	RootTags(ctx context.Context, obj *model.StaticTagCategory, skip *int, limit *int) ([]model.Tag, error)
 }
 type UserResolver interface {
 	Groups(ctx context.Context, obj *model.User, skip *int, limit *int) ([]*model.Group, error)
@@ -2085,7 +2089,7 @@ func (ec *executionContext) _DynamicTagCategory_rootTags(ctx context.Context, fi
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.RootTags, nil
+		return ec.resolvers.DynamicTagCategory().RootTags(rctx, obj, fc.Args["skip"].(*int), fc.Args["limit"].(*int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2103,8 +2107,8 @@ func (ec *executionContext) fieldContext_DynamicTagCategory_rootTags(ctx context
 	fc = &graphql.FieldContext{
 		Object:     "DynamicTagCategory",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("FieldContext.Child cannot be called on type INTERFACE")
 		},
@@ -3466,7 +3470,7 @@ func (ec *executionContext) _StaticTagCategory_rootTags(ctx context.Context, fie
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.RootTags, nil
+		return ec.resolvers.StaticTagCategory().RootTags(rctx, obj, fc.Args["skip"].(*int), fc.Args["limit"].(*int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3484,8 +3488,8 @@ func (ec *executionContext) fieldContext_StaticTagCategory_rootTags(ctx context.
 	fc = &graphql.FieldContext{
 		Object:     "StaticTagCategory",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("FieldContext.Child cannot be called on type INTERFACE")
 		},
@@ -5777,7 +5781,38 @@ func (ec *executionContext) _DynamicTagCategory(ctx context.Context, sel ast.Sel
 		case "format":
 			out.Values[i] = ec._DynamicTagCategory_format(ctx, field, obj)
 		case "rootTags":
-			out.Values[i] = ec._DynamicTagCategory_rootTags(ctx, field, obj)
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._DynamicTagCategory_rootTags(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -6220,7 +6255,38 @@ func (ec *executionContext) _StaticTagCategory(ctx context.Context, sel ast.Sele
 				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "rootTags":
-			out.Values[i] = ec._StaticTagCategory_rootTags(ctx, field, obj)
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._StaticTagCategory_rootTags(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
