@@ -233,12 +233,111 @@ func (r *queryResolver) Identity(ctx context.Context, skip *int, limit *int) ([]
 
 // TagCategory is the resolver for the tagCategory field.
 func (r *queryResolver) TagCategory(ctx context.Context, id *string) (model.TagCategory, error) {
-	panic(fmt.Errorf("not implemented: TagCategory - tagCategory"))
+	type MergedTagCategory struct {
+		ID            string
+		Name          string
+		Discriminator string
+		Parent        string
+		Format        string
+		Open          bool
+	}
+
+	slog.InfoContext(ctx, "TagCategory", "id", id)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("db.operation.name", "select"))
+	if id != nil {
+		span.SetAttributes(attribute.String("id", *id))
+	}
+
+	query := "SELECT id,name FROM tagcategory WHERE id = ?"
+	span.SetAttributes(attribute.String("db.query.text", query))
+	result, err := r.dB.Query(query, *id)
+	if err != nil {
+		return model.StaticTagCategory{}, err
+	}
+	defer result.Close()
+
+	var mergedTagCategory MergedTagCategory
+	for result.Next() {
+		err := result.Scan(&mergedTagCategory.ID, &mergedTagCategory.Name, &mergedTagCategory.Discriminator, &mergedTagCategory.Parent, &mergedTagCategory.Format, &mergedTagCategory.Open)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	switch mergedTagCategory.Discriminator {
+	case "static":
+		return model.StaticTagCategory{
+			ID:     mergedTagCategory.ID,
+			Name:   mergedTagCategory.Name,
+			IsOpen: mergedTagCategory.Open,
+		}, nil
+	case "dynamic":
+		return model.DynamicTagCategory{
+			ID:     mergedTagCategory.ID,
+			Name:   mergedTagCategory.Name,
+			Format: mergedTagCategory.Format,
+		}, nil
+	default:
+		return nil, fmt.Errorf("unknown tag category discriminator: %s", mergedTagCategory.Discriminator)
+	}
 }
 
 // TagCategories is the resolver for the tagCategories field.
 func (r *queryResolver) TagCategories(ctx context.Context, skip *int, limit *int) ([]model.TagCategory, error) {
-	panic(fmt.Errorf("not implemented: TagCategories - tagCategories"))
+	type MergedTagCategory struct {
+		ID            string
+		Name          string
+		Discriminator string
+		Parent        *string
+		Format        *string
+		Open          bool
+	}
+
+	slog.InfoContext(ctx, "TagCategories", "skip", skip, "limit", limit)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("db.operation.name", "select"),
+		attribute.Int("skip", *skip),
+		attribute.Int("limit", *limit))
+	query := "SELECT id,name,discriminator,parent,format,open FROM tagcategory LIMIT ?,?"
+	span.SetAttributes(attribute.String("db.query.text", query))
+	result, err := r.dB.Query(query, *skip, *limit)
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	tagCategories := []model.TagCategory{}
+	for result.Next() {
+		var mergedTagCategory MergedTagCategory
+		err := result.Scan(&mergedTagCategory.ID, &mergedTagCategory.Name, &mergedTagCategory.Discriminator, &mergedTagCategory.Parent, &mergedTagCategory.Format, &mergedTagCategory.Open)
+		if err != nil {
+			return nil, err
+		}
+
+		switch mergedTagCategory.Discriminator {
+		case "static":
+			tagCategories = append(tagCategories, model.StaticTagCategory{
+				ID:     mergedTagCategory.ID,
+				Name:   mergedTagCategory.Name,
+				IsOpen: mergedTagCategory.Open,
+			})
+		case "dynamic":
+			tagCategories = append(tagCategories, model.DynamicTagCategory{
+				ID:     mergedTagCategory.ID,
+				Name:   mergedTagCategory.Name,
+				Format: *mergedTagCategory.Format,
+			})
+		default:
+			return nil, fmt.Errorf("unknown tag category discriminator: %s", mergedTagCategory.Discriminator)
+		}
+	}
+
+	return tagCategories, nil
 }
 
 // Groups is the resolver for the groups field.
@@ -286,5 +385,11 @@ type groupResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type userResolver struct{ *Resolver }
 
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//     it when you're done.
+//   - You have helper methods in this file. Move them out to keep these resolver files clean.
 type mutationResolver struct{ *Resolver }
 type tagResolver struct{ *Resolver }

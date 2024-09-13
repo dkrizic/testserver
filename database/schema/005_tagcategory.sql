@@ -7,7 +7,7 @@ create table tagcategory (
     foreign key (parent) references tagcategory (id),
     description text,
     format varchar(255), -- format for dynamic tags
-    isopen boolean not null default false-- for static tags
+    open boolean not null default false-- for static tags
 );
 
 -- +goose Down

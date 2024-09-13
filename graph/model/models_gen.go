@@ -21,7 +21,7 @@ type TagCategory interface {
 	IsTagCategory()
 	GetID() string
 	GetName() string
-	GetParentTageCateogry() TagCategory
+	GetParentTagCategory() TagCategory
 	GetChildTagCategories() []TagCategory
 }
 
@@ -51,16 +51,16 @@ func (this DynamicTag) GetID() string { return this.ID }
 type DynamicTagCategory struct {
 	ID                 string        `json:"id"`
 	Name               string        `json:"name"`
-	ParentTageCateogry TagCategory   `json:"parentTageCateogry,omitempty"`
+	ParentTagCategory  TagCategory   `json:"parentTagCategory,omitempty"`
 	ChildTagCategories []TagCategory `json:"childTagCategories,omitempty"`
 	DynamicTags        []*DynamicTag `json:"dynamicTags,omitempty"`
 	Format             string        `json:"format"`
 }
 
-func (DynamicTagCategory) IsTagCategory()                          {}
-func (this DynamicTagCategory) GetID() string                      { return this.ID }
-func (this DynamicTagCategory) GetName() string                    { return this.Name }
-func (this DynamicTagCategory) GetParentTageCateogry() TagCategory { return this.ParentTageCateogry }
+func (DynamicTagCategory) IsTagCategory()                         {}
+func (this DynamicTagCategory) GetID() string                     { return this.ID }
+func (this DynamicTagCategory) GetName() string                   { return this.Name }
+func (this DynamicTagCategory) GetParentTagCategory() TagCategory { return this.ParentTagCategory }
 func (this DynamicTagCategory) GetChildTagCategories() []TagCategory {
 	if this.ChildTagCategories == nil {
 		return nil
@@ -91,9 +91,10 @@ type Query struct {
 }
 
 type StaticTag struct {
-	ID          string             `json:"id"`
-	Name        string             `json:"name"`
-	TagCategory *StaticTagCategory `json:"tagCategory"`
+	ID              string             `json:"id"`
+	Name            string             `json:"name"`
+	TagCategory     *StaticTagCategory `json:"tagCategory"`
+	ParentStaticTag *StaticTag         `json:"parentStaticTag,omitempty"`
 }
 
 func (StaticTag) IsTag()             {}
@@ -102,16 +103,16 @@ func (this StaticTag) GetID() string { return this.ID }
 type StaticTagCategory struct {
 	ID                 string        `json:"id"`
 	Name               string        `json:"name"`
-	ParentTageCateogry TagCategory   `json:"parentTageCateogry,omitempty"`
+	ParentTagCategory  TagCategory   `json:"parentTagCategory,omitempty"`
 	ChildTagCategories []TagCategory `json:"childTagCategories,omitempty"`
 	StaticTags         []*StaticTag  `json:"staticTags,omitempty"`
 	IsOpen             bool          `json:"isOpen"`
 }
 
-func (StaticTagCategory) IsTagCategory()                          {}
-func (this StaticTagCategory) GetID() string                      { return this.ID }
-func (this StaticTagCategory) GetName() string                    { return this.Name }
-func (this StaticTagCategory) GetParentTageCateogry() TagCategory { return this.ParentTageCateogry }
+func (StaticTagCategory) IsTagCategory()                         {}
+func (this StaticTagCategory) GetID() string                     { return this.ID }
+func (this StaticTagCategory) GetName() string                   { return this.Name }
+func (this StaticTagCategory) GetParentTagCategory() TagCategory { return this.ParentTagCategory }
 func (this StaticTagCategory) GetChildTagCategories() []TagCategory {
 	if this.ChildTagCategories == nil {
 		return nil
