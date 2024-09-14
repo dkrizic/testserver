@@ -19,6 +19,7 @@
 * *Probes*: Exposes readiness and liveness probes
   * /health endpoint
 * Version awareness: Exploses the own version via /version endpoint
+* Automated testing
 
 ## Diagram
 

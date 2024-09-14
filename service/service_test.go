@@ -41,5 +41,8 @@ func TestGraphQl(t *testing.T) {
 		}
 		c.MustPost(`{group{id,name}}`, &resp)
 		slog.Info("Response", "resp", resp)
+		if len(resp.Group) != 2 {
+			t.Fatalf("expected 2 groups, got %d", len(resp.Group))
+		}
 	})
 }
