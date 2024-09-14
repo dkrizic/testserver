@@ -24,3 +24,59 @@
 
 ![graph.png](graph.png)
 
+# Queries
+
+## TagCategories and Tags
+
+```
+query {
+  tagCategories {
+    id
+    name
+    __typename
+    parentTagCategory {
+      id
+      name
+      __typename
+    }
+    ...on StaticTagCategory {
+      isOpen
+    }
+    ...on DynamicTagCategory {
+      format
+    }
+    childTagCategories {
+      id
+      name
+      __typename
+    }
+    rootTags {
+      id
+      ...on StaticTag {
+        name
+      }
+      ...on DynamicTag {
+        value
+      }
+      parentTag {
+        id
+        ...on StaticTag {
+          name
+        }
+        ...on DynamicTag {
+          value
+        }
+      }
+      childTags {
+        id
+        ...on StaticTag {
+          name
+        }
+        ...on DynamicTag {
+          value
+        }
+      }
+    }
+  }
+}
+```

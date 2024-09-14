@@ -117,7 +117,8 @@ func (s *Service) Run() error {
 	if s.CleanDatabase {
 		err = database.CleanSchema(db)
 		if err != nil {
-			slog.Warn("Failed to clean schema - ignoring", "error", err)
+			slog.Error("Failed to clean schema", "error", err)
+			return err
 		}
 	}
 
