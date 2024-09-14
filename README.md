@@ -80,3 +80,43 @@ query {
   }
 }
 ```
+
+## Asset with Tags
+
+```
+query AssetsWithTags {
+  asset {
+    id
+    name
+    files {
+      id
+      name
+      size
+      mimeType
+    }
+    tags {
+      __typename
+      id
+      ...on StaticTag {
+        name
+        tagCategory {
+          id
+          name
+          parentTagCategory {
+            id
+            name
+          }
+          isOpen
+        }
+      }
+      ...on DynamicTag {
+        value
+        tagCategory {
+          id
+          name
+        }
+      }
+    }
+  }
+}
+```
