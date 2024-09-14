@@ -1,4 +1,4 @@
-all: generate build
+all: generate build test
 
 generate:
 	go generate ./...
@@ -17,3 +17,6 @@ diagram:
 
 clean:
 	rm -f testserver
+
+test:
+	go test ./...

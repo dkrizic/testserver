@@ -228,7 +228,7 @@ func (r *dynamicTagResolver) TagCategory(ctx context.Context, obj *model.Dynamic
 			slog.ErrorContext(ctx, "Error scanning row", "error", err, "id", obj.ID, "type", "tagcategory")
 			return nil, err
 		}
-		slog.Debug("Entity", slog.Group("entity", dtc))
+		slog.Debug("Entity", slog.Group("entity", "id", dtc.ID, "name", dtc.Name, "format", dtc.Format))
 		return &dtc, nil
 	} else {
 		return nil, nil
@@ -295,7 +295,7 @@ func (r *dynamicTagResolver) ChildTags(ctx context.Context, obj *model.DynamicTa
 			return nil, err
 		}
 		tag, err := it.AsTag()
-		slog.DebugContext(ctx, "Entity", slog.Group("entity", tag))
+		slog.DebugContext(ctx, "Entity", slog.Group("entity", "id", tag.GetID()))
 		if err != nil {
 			return nil, err
 		}
