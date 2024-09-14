@@ -15,6 +15,123 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// Identity is the resolver for the identity field.
+func (r *accessResolver) Identity(ctx context.Context, obj *model.Access) (model.Identity, error) {
+	slog.InfoContext(ctx, "Identity(byAccess)", "id", obj.ID)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("db.operation.name", "select"))
+	span.SetAttributes(attribute.String("id", obj.ID))
+
+	query := "SELECT id,email FROM user WHERE id = (SELECT identity_id FROM access WHERE id = ?)"
+	span.SetAttributes(
+		attribute.String("db.query.text", query),
+		attribute.String("db.parameter.id", obj.ID))
+	result, err := r.dB.Query(query, obj.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	var user model.User
+	if result.Next() {
+		err := result.Scan(&user.ID, &user.Email)
+		if err != nil {
+			slog.ErrorContext(ctx, "Error scanning row", "error", err, "id", obj.ID, "type", "user")
+			return nil, err
+		}
+		return &user, nil
+	}
+
+	query = "SELECT id,name FROM `group` WHERE id = (SELECT identity_id FROM access WHERE id = ?)"
+	span.SetAttributes(
+		attribute.String("db.query.text", query),
+		attribute.String("db.parameter.id", obj.ID))
+	result, err = r.dB.Query(query, obj.ID)
+	if err != nil {
+		return nil, nil
+	}
+	defer result.Close()
+
+	var group model.Group
+	if result.Next() {
+		err := result.Scan(&group.ID, &group.Name)
+		if err != nil {
+			slog.ErrorContext(ctx, "Error scanning row", "error", err, "identity_id", obj.Identity.GetID(), "type", "group")
+			return nil, err
+		}
+		return &group, nil
+	}
+
+	return nil, fmt.Errorf("No group or identitiy for asset id %s found", obj.ID)
+}
+
+// Asset is the resolver for the asset field.
+func (r *accessResolver) Asset(ctx context.Context, obj *model.Access) (*model.Asset, error) {
+	slog.InfoContext(ctx, "Asset(byAccess)", "id", obj.ID)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("db.operation.name", "select"))
+	span.SetAttributes(
+		attribute.String("id", obj.ID))
+	query := "SELECT id,name FROM asset WHERE id = (SELECT asset_id FROM access WHERE id = ?)"
+	span.SetAttributes(
+		attribute.String("db.query.text", query),
+		attribute.String("db.parameter.id", obj.ID))
+	result, err := r.dB.Query(query, obj.ID)
+	if err != nil {
+		return nil, nil
+	}
+	defer result.Close()
+
+	var asset model.Asset
+	if result.Next() {
+		err := result.Scan(&asset.ID, &asset.Name)
+		if err != nil {
+			slog.ErrorContext(ctx, "Error scanning row", "error", err, "asset_id", obj.Asset.ID, "identity_id", obj.Identity.GetID(), "type", "asset")
+			return nil, err
+		}
+		return &asset, nil
+	} else {
+		return nil, nil
+	}
+}
+
+// Accesses is the resolver for the accesses field.
+func (r *assetResolver) Accesses(ctx context.Context, obj *model.Asset, skip *int, limit *int) ([]*model.Access, error) {
+	slog.InfoContext(ctx, "Accesses(forAsset)", "id", obj.ID, "skip", skip, "limit", limit)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("db.operation.name", "select"),
+		attribute.Int("skip", *skip),
+		attribute.Int("limit", *limit))
+	span.SetAttributes(attribute.String("id", obj.ID))
+	query := "SELECT id, permission FROM access WHERE asset_id  = ? limit ?,?"
+	span.SetAttributes(
+		attribute.String("db.query.text", query),
+		attribute.String("db.parameter.id", obj.ID))
+	result, err := r.dB.Query(query, obj.ID, skip, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	accesses := []*model.Access{}
+	for result.Next() {
+		var access model.Access
+		err := result.Scan(&access.ID, &access.Permission)
+		if err != nil {
+			slog.ErrorContext(ctx, "Error scanning row", "error", err, "id", obj.ID, "type", "access")
+			return nil, err
+		}
+		accesses = append(accesses, &access)
+	}
+	return accesses, nil
+}
+
 // Files is the resolver for the files field.
 func (r *assetResolver) Files(ctx context.Context, obj *model.Asset, skip *int, limit *int) ([]*model.File, error) {
 	slog.InfoContext(ctx, "Files(forAsset)", "id", obj.ID, "skip", skip, "limit", limit)
@@ -291,8 +408,36 @@ func (r *groupResolver) Users(ctx context.Context, obj *model.Group, skip *int, 
 }
 
 // Accesses is the resolver for the accesses field.
-func (r *groupResolver) Accesses(ctx context.Context, obj *model.Group, skip *int, limit *int, permission model.Permission) ([]*model.Access, error) {
-	panic(fmt.Errorf("not implemented: Accesses - accesses"))
+func (r *groupResolver) Accesses(ctx context.Context, obj *model.Group, skip *int, limit *int) ([]*model.Access, error) {
+	slog.InfoContext(ctx, "Accesses(forGroup)", "id", obj.ID, "skip", skip, "limit", limit)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("db.operation.name", "select"),
+		attribute.Int("skip", *skip),
+		attribute.Int("limit", *limit))
+	span.SetAttributes(attribute.String("id", obj.ID))
+	query := "SELECT id, permission FROM access WHERE discriminator = 'group' and access.identity_id  = ? limit ?,?"
+	span.SetAttributes(
+		attribute.String("db.query.text", query),
+		attribute.String("db.parameter.id", obj.ID))
+	result, err := r.dB.Query(query, obj.ID, skip, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	accesses := []*model.Access{}
+	for result.Next() {
+		var access model.Access
+		err := result.Scan(&access.ID, &access.Permission)
+		if err != nil {
+			slog.ErrorContext(ctx, "Error scanning row", "error", err, "id", obj.ID, "type", "access")
+			return nil, err
+		}
+		accesses = append(accesses, &access)
+	}
+	return accesses, nil
 }
 
 // Asset is the resolver for the asset field.
@@ -778,9 +923,39 @@ func (r *userResolver) Groups(ctx context.Context, obj *model.User, skip *int, l
 }
 
 // Accesses is the resolver for the accesses field.
-func (r *userResolver) Accesses(ctx context.Context, obj *model.User, skip *int, limit *int, permission model.Permission) ([]*model.Access, error) {
-	panic(fmt.Errorf("not implemented: Accesses - accesses"))
+func (r *userResolver) Accesses(ctx context.Context, obj *model.User, skip *int, limit *int) ([]*model.Access, error) {
+	slog.InfoContext(ctx, "Accesses(forUser)", "id", obj.ID, "skip", skip, "limit", limit)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("db.operation.name", "select"),
+		attribute.Int("skip", *skip),
+		attribute.Int("limit", *limit))
+	span.SetAttributes(attribute.String("id", obj.ID))
+	query := "SELECT id,permission FROM access WHERE discriminator='user' AND access.identity_id = ? limit ?,?"
+	span.SetAttributes(
+		attribute.String("db.query.text", query),
+		attribute.String("db.parameter.id", obj.ID))
+	result, err := r.dB.Query(query, obj.ID, skip, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	accesses := []*model.Access{}
+	for result.Next() {
+		var access model.Access
+		err := result.Scan(&access.ID, &access.Permission)
+		if err != nil {
+			return nil, err
+		}
+		accesses = append(accesses, &access)
+	}
+	return accesses, nil
 }
+
+// Access returns AccessResolver implementation.
+func (r *Resolver) Access() AccessResolver { return &accessResolver{r} }
 
 // Asset returns AssetResolver implementation.
 func (r *Resolver) Asset() AssetResolver { return &assetResolver{r} }
@@ -810,6 +985,7 @@ func (r *Resolver) StaticTagCategory() StaticTagCategoryResolver {
 // User returns UserResolver implementation.
 func (r *Resolver) User() UserResolver { return &userResolver{r} }
 
+type accessResolver struct{ *Resolver }
 type assetResolver struct{ *Resolver }
 type dynamicTagResolver struct{ *Resolver }
 type dynamicTagCategoryResolver struct{ *Resolver }

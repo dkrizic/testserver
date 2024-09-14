@@ -15,21 +15,21 @@ directive @goField(forceResolver: Boolean, name: String, omittable: Boolean) on 
 # type Identity is either User or Group
 interface Identity {
   id: ID!
-  accesses(skip:Int = 0,limit:Int = 20, permission: Permission!): [Access!]
+  accesses(skip:Int = 0,limit:Int = 20): [Access!]
 }
 
 type User implements Identity{
   id: ID!
   email: String!
   groups(skip:Int = 0,limit:Int = 20): [Group!]
-  accesses(skip:Int = 0,limit:Int = 20, permission: Permission!): [Access!] @goField(forceResolver: true)
+  accesses(skip:Int = 0,limit:Int = 20): [Access!] @goField(forceResolver: true)
 }
 
 type Group implements Identity {
   id: ID!
   name: String!
   users(skip:Int = 0,limit:Int = 20): [User!]
-  accesses(skip:Int = 0,limit:Int = 20, permission: Permission!): [Access!] @goField(forceResolver: true)
+  accesses(skip:Int = 0,limit:Int = 20): [Access!] @goField(forceResolver: true)
 }
 
 # enum for read and write permissions
@@ -39,15 +39,16 @@ enum Permission {
 }
 
 type Access {
-  identity: Identity!
-  asset: Asset!
+  id: ID!
+  identity: Identity! @goField(forceResolver: true)
+  asset: Asset! @goField(forceResolver: true)
   permission: Permission!
 }
 
 type Asset {
   id: ID!
   name: String!
-  permissions(skip: Int = 0, limit: Int = 10): [Access!]
+  accesses(skip: Int = 0, limit: Int = 10): [Access!] @goField(forceResolver: true)
   files(skip: Int = 0, limit: Int = 10): [File!] @goField(forceResolver: true)
   tags(skip: Int = 0, limit: Int = 10): [Tag!] @goField(forceResolver: true)
   # Mobile

@@ -32,17 +32,18 @@ type TagCategory interface {
 }
 
 type Access struct {
+	ID         string     `json:"id"`
 	Identity   Identity   `json:"identity"`
 	Asset      *Asset     `json:"asset"`
 	Permission Permission `json:"permission"`
 }
 
 type Asset struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Permissions []*Access `json:"permissions,omitempty"`
-	Files       []*File   `json:"files,omitempty"`
-	Tags        []Tag     `json:"tags,omitempty"`
+	ID       string    `json:"id"`
+	Name     string    `json:"name"`
+	Accesses []*Access `json:"accesses,omitempty"`
+	Files    []*File   `json:"files,omitempty"`
+	Tags     []Tag     `json:"tags,omitempty"`
 }
 
 type DynamicTag struct {
