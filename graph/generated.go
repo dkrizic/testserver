@@ -94,10 +94,10 @@ type ComplexityRoot struct {
 	}
 
 	Group struct {
-		Assets func(childComplexity int, skip *int, limit *int, permission model.PermissionQuery) int
-		ID     func(childComplexity int) int
-		Name   func(childComplexity int) int
-		Users  func(childComplexity int, skip *int, limit *int) int
+		Accesses func(childComplexity int, skip *int, limit *int, permission model.Permission) int
+		ID       func(childComplexity int) int
+		Name     func(childComplexity int) int
+		Users    func(childComplexity int, skip *int, limit *int) int
 	}
 
 	Query struct {
@@ -130,10 +130,10 @@ type ComplexityRoot struct {
 	}
 
 	User struct {
-		Assets func(childComplexity int, skip *int, limit *int, permission model.PermissionQuery) int
-		Email  func(childComplexity int) int
-		Groups func(childComplexity int, skip *int, limit *int) int
-		ID     func(childComplexity int) int
+		Accesses func(childComplexity int, skip *int, limit *int, permission model.Permission) int
+		Email    func(childComplexity int) int
+		Groups   func(childComplexity int, skip *int, limit *int) int
+		ID       func(childComplexity int) int
 	}
 }
 
@@ -154,6 +154,7 @@ type DynamicTagCategoryResolver interface {
 }
 type GroupResolver interface {
 	Users(ctx context.Context, obj *model.Group, skip *int, limit *int) ([]*model.User, error)
+	Accesses(ctx context.Context, obj *model.Group, skip *int, limit *int, permission model.Permission) ([]*model.Access, error)
 }
 type QueryResolver interface {
 	Asset(ctx context.Context, id *string, skip *int, limit *int) ([]*model.Asset, error)
@@ -177,6 +178,7 @@ type StaticTagCategoryResolver interface {
 }
 type UserResolver interface {
 	Groups(ctx context.Context, obj *model.User, skip *int, limit *int) ([]*model.Group, error)
+	Accesses(ctx context.Context, obj *model.User, skip *int, limit *int, permission model.Permission) ([]*model.Access, error)
 }
 
 type executableSchema struct {
@@ -408,17 +410,17 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.File.Size(childComplexity), true
 
-	case "Group.assets":
-		if e.complexity.Group.Assets == nil {
+	case "Group.accesses":
+		if e.complexity.Group.Accesses == nil {
 			break
 		}
 
-		args, err := ec.field_Group_assets_args(context.TODO(), rawArgs)
+		args, err := ec.field_Group_accesses_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Group.Assets(childComplexity, args["skip"].(*int), args["limit"].(*int), args["permission"].(model.PermissionQuery)), true
+		return e.complexity.Group.Accesses(childComplexity, args["skip"].(*int), args["limit"].(*int), args["permission"].(model.Permission)), true
 
 	case "Group.id":
 		if e.complexity.Group.ID == nil {
@@ -641,17 +643,17 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.StaticTagCategory.StaticTags(childComplexity, args["skip"].(*int), args["limit"].(*int)), true
 
-	case "User.assets":
-		if e.complexity.User.Assets == nil {
+	case "User.accesses":
+		if e.complexity.User.Accesses == nil {
 			break
 		}
 
-		args, err := ec.field_User_assets_args(context.TODO(), rawArgs)
+		args, err := ec.field_User_accesses_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.User.Assets(childComplexity, args["skip"].(*int), args["limit"].(*int), args["permission"].(model.PermissionQuery)), true
+		return e.complexity.User.Accesses(childComplexity, args["skip"].(*int), args["limit"].(*int), args["permission"].(model.Permission)), true
 
 	case "User.email":
 		if e.complexity.User.Email == nil {
@@ -955,7 +957,7 @@ func (ec *executionContext) field_DynamicTag_childTags_args(ctx context.Context,
 	return args, nil
 }
 
-func (ec *executionContext) field_Group_assets_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Group_accesses_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 *int
@@ -976,10 +978,10 @@ func (ec *executionContext) field_Group_assets_args(ctx context.Context, rawArgs
 		}
 	}
 	args["limit"] = arg1
-	var arg2 model.PermissionQuery
+	var arg2 model.Permission
 	if tmp, ok := rawArgs["permission"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("permission"))
-		arg2, err = ec.unmarshalNPermissionQuery2githubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐPermissionQuery(ctx, tmp)
+		arg2, err = ec.unmarshalNPermission2githubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐPermission(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1300,7 +1302,7 @@ func (ec *executionContext) field_StaticTag_childTags_args(ctx context.Context, 
 	return args, nil
 }
 
-func (ec *executionContext) field_User_assets_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_User_accesses_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 *int
@@ -1321,10 +1323,10 @@ func (ec *executionContext) field_User_assets_args(ctx context.Context, rawArgs 
 		}
 	}
 	args["limit"] = arg1
-	var arg2 model.PermissionQuery
+	var arg2 model.Permission
 	if tmp, ok := rawArgs["permission"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("permission"))
-		arg2, err = ec.unmarshalNPermissionQuery2githubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐPermissionQuery(ctx, tmp)
+		arg2, err = ec.unmarshalNPermission2githubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐPermission(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1433,51 +1435,7 @@ func (ec *executionContext) fieldContext_Access_identity(_ context.Context, fiel
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Identity does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Access_permission(ctx context.Context, field graphql.CollectedField, obj *model.Access) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Access_permission(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Permission, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(model.Permission)
-	fc.Result = res
-	return ec.marshalNPermission2githubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐPermission(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Access_permission(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Access",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Permission does not have child fields")
+			return nil, errors.New("FieldContext.Child cannot be called on type INTERFACE")
 		},
 	}
 	return fc, nil
@@ -1534,6 +1492,50 @@ func (ec *executionContext) fieldContext_Access_asset(_ context.Context, field g
 				return ec.fieldContext_Asset_tags(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Asset", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Access_permission(ctx context.Context, field graphql.CollectedField, obj *model.Access) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Access_permission(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Permission, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(model.Permission)
+	fc.Result = res
+	return ec.marshalNPermission2githubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐPermission(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Access_permission(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Access",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Permission does not have child fields")
 		},
 	}
 	return fc, nil
@@ -1665,10 +1667,10 @@ func (ec *executionContext) fieldContext_Asset_permissions(ctx context.Context, 
 			switch field.Name {
 			case "identity":
 				return ec.fieldContext_Access_identity(ctx, field)
-			case "permission":
-				return ec.fieldContext_Access_permission(ctx, field)
 			case "asset":
 				return ec.fieldContext_Access_asset(ctx, field)
+			case "permission":
+				return ec.fieldContext_Access_permission(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Access", field.Name)
 		},
@@ -2642,7 +2644,7 @@ func (ec *executionContext) _Group_id(ctx context.Context, field graphql.Collect
 	}
 	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalNID2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Group_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -2652,7 +2654,7 @@ func (ec *executionContext) fieldContext_Group_id(_ context.Context, field graph
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
+			return nil, errors.New("field of type ID does not have child fields")
 		},
 	}
 	return fc, nil
@@ -2744,8 +2746,8 @@ func (ec *executionContext) fieldContext_Group_users(ctx context.Context, field 
 				return ec.fieldContext_User_email(ctx, field)
 			case "groups":
 				return ec.fieldContext_User_groups(ctx, field)
-			case "assets":
-				return ec.fieldContext_User_assets(ctx, field)
+			case "accesses":
+				return ec.fieldContext_User_accesses(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
@@ -2764,8 +2766,8 @@ func (ec *executionContext) fieldContext_Group_users(ctx context.Context, field 
 	return fc, nil
 }
 
-func (ec *executionContext) _Group_assets(ctx context.Context, field graphql.CollectedField, obj *model.Group) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Group_assets(ctx, field)
+func (ec *executionContext) _Group_accesses(ctx context.Context, field graphql.CollectedField, obj *model.Group) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Group_accesses(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -2778,7 +2780,7 @@ func (ec *executionContext) _Group_assets(ctx context.Context, field graphql.Col
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Assets, nil
+		return ec.resolvers.Group().Accesses(rctx, obj, fc.Args["skip"].(*int), fc.Args["limit"].(*int), fc.Args["permission"].(model.Permission))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2787,31 +2789,27 @@ func (ec *executionContext) _Group_assets(ctx context.Context, field graphql.Col
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.([]*model.Asset)
+	res := resTmp.([]*model.Access)
 	fc.Result = res
-	return ec.marshalOAsset2ᚕᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐAssetᚄ(ctx, field.Selections, res)
+	return ec.marshalOAccess2ᚕᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐAccessᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Group_assets(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Group_accesses(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Group",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Asset_id(ctx, field)
-			case "name":
-				return ec.fieldContext_Asset_name(ctx, field)
-			case "permissions":
-				return ec.fieldContext_Asset_permissions(ctx, field)
-			case "files":
-				return ec.fieldContext_Asset_files(ctx, field)
-			case "tags":
-				return ec.fieldContext_Asset_tags(ctx, field)
+			case "identity":
+				return ec.fieldContext_Access_identity(ctx, field)
+			case "asset":
+				return ec.fieldContext_Access_asset(ctx, field)
+			case "permission":
+				return ec.fieldContext_Access_permission(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Asset", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type Access", field.Name)
 		},
 	}
 	defer func() {
@@ -2821,7 +2819,7 @@ func (ec *executionContext) fieldContext_Group_assets(ctx context.Context, field
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Group_assets_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Group_accesses_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -2940,8 +2938,8 @@ func (ec *executionContext) fieldContext_Query_user(ctx context.Context, field g
 				return ec.fieldContext_User_email(ctx, field)
 			case "groups":
 				return ec.fieldContext_User_groups(ctx, field)
-			case "assets":
-				return ec.fieldContext_User_assets(ctx, field)
+			case "accesses":
+				return ec.fieldContext_User_accesses(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
@@ -3005,8 +3003,8 @@ func (ec *executionContext) fieldContext_Query_group(ctx context.Context, field 
 				return ec.fieldContext_Group_name(ctx, field)
 			case "users":
 				return ec.fieldContext_Group_users(ctx, field)
-			case "assets":
-				return ec.fieldContext_Group_assets(ctx, field)
+			case "accesses":
+				return ec.fieldContext_Group_accesses(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Group", field.Name)
 		},
@@ -3063,7 +3061,7 @@ func (ec *executionContext) fieldContext_Query_identity(ctx context.Context, fie
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Identity does not have child fields")
+			return nil, errors.New("FieldContext.Child cannot be called on type INTERFACE")
 		},
 	}
 	defer func() {
@@ -4035,7 +4033,7 @@ func (ec *executionContext) _User_id(ctx context.Context, field graphql.Collecte
 	}
 	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalNID2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_User_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4045,7 +4043,7 @@ func (ec *executionContext) fieldContext_User_id(_ context.Context, field graphq
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
+			return nil, errors.New("field of type ID does not have child fields")
 		},
 	}
 	return fc, nil
@@ -4137,8 +4135,8 @@ func (ec *executionContext) fieldContext_User_groups(ctx context.Context, field 
 				return ec.fieldContext_Group_name(ctx, field)
 			case "users":
 				return ec.fieldContext_Group_users(ctx, field)
-			case "assets":
-				return ec.fieldContext_Group_assets(ctx, field)
+			case "accesses":
+				return ec.fieldContext_Group_accesses(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Group", field.Name)
 		},
@@ -4157,8 +4155,8 @@ func (ec *executionContext) fieldContext_User_groups(ctx context.Context, field 
 	return fc, nil
 }
 
-func (ec *executionContext) _User_assets(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_User_assets(ctx, field)
+func (ec *executionContext) _User_accesses(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_User_accesses(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -4171,7 +4169,7 @@ func (ec *executionContext) _User_assets(ctx context.Context, field graphql.Coll
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Assets, nil
+		return ec.resolvers.User().Accesses(rctx, obj, fc.Args["skip"].(*int), fc.Args["limit"].(*int), fc.Args["permission"].(model.Permission))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4180,31 +4178,27 @@ func (ec *executionContext) _User_assets(ctx context.Context, field graphql.Coll
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.([]*model.Asset)
+	res := resTmp.([]*model.Access)
 	fc.Result = res
-	return ec.marshalOAsset2ᚕᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐAssetᚄ(ctx, field.Selections, res)
+	return ec.marshalOAccess2ᚕᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐAccessᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_User_assets(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_User_accesses(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "User",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Asset_id(ctx, field)
-			case "name":
-				return ec.fieldContext_Asset_name(ctx, field)
-			case "permissions":
-				return ec.fieldContext_Asset_permissions(ctx, field)
-			case "files":
-				return ec.fieldContext_Asset_files(ctx, field)
-			case "tags":
-				return ec.fieldContext_Asset_tags(ctx, field)
+			case "identity":
+				return ec.fieldContext_Access_identity(ctx, field)
+			case "asset":
+				return ec.fieldContext_Access_asset(ctx, field)
+			case "permission":
+				return ec.fieldContext_Access_permission(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Asset", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type Access", field.Name)
 		},
 	}
 	defer func() {
@@ -4214,7 +4208,7 @@ func (ec *executionContext) fieldContext_User_assets(ctx context.Context, field 
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_User_assets_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_User_accesses_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -6087,13 +6081,13 @@ func (ec *executionContext) _Access(ctx context.Context, sel ast.SelectionSet, o
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "permission":
-			out.Values[i] = ec._Access_permission(ctx, field, obj)
+		case "asset":
+			out.Values[i] = ec._Access_asset(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "asset":
-			out.Values[i] = ec._Access_asset(ctx, field, obj)
+		case "permission":
+			out.Values[i] = ec._Access_permission(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -6607,8 +6601,39 @@ func (ec *executionContext) _Group(ctx context.Context, sel ast.SelectionSet, ob
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "assets":
-			out.Values[i] = ec._Group_assets(ctx, field, obj)
+		case "accesses":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Group_accesses(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -7151,8 +7176,39 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "assets":
-			out.Values[i] = ec._User_assets(ctx, field, obj)
+		case "accesses":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._User_accesses(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -7763,16 +7819,6 @@ func (ec *executionContext) marshalNPermission2githubᚗcomᚋdkrizicᚋtestserv
 	return v
 }
 
-func (ec *executionContext) unmarshalNPermissionQuery2githubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐPermissionQuery(ctx context.Context, v interface{}) (model.PermissionQuery, error) {
-	var res model.PermissionQuery
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNPermissionQuery2githubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐPermissionQuery(ctx context.Context, sel ast.SelectionSet, v model.PermissionQuery) graphql.Marshaler {
-	return v
-}
-
 func (ec *executionContext) marshalNStaticTag2ᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐStaticTag(ctx context.Context, sel ast.SelectionSet, v *model.StaticTag) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
@@ -8167,53 +8213,6 @@ func (ec *executionContext) marshalOAccess2ᚕᚖgithubᚗcomᚋdkrizicᚋtestse
 				defer wg.Done()
 			}
 			ret[i] = ec.marshalNAccess2ᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐAccess(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
-func (ec *executionContext) marshalOAsset2ᚕᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐAssetᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Asset) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNAsset2ᚖgithubᚗcomᚋdkrizicᚋtestserverᚋgraphᚋmodelᚐAsset(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)

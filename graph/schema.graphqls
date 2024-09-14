@@ -13,20 +13,23 @@ directive @goField(forceResolver: Boolean, name: String, omittable: Boolean) on 
   | FIELD_DEFINITION
 
 # type Identity is either User or Group
-union Identity = User | Group
-
-type User {
-  id: String!
-  email: String!
-  groups(skip:Int = 0,limit:Int = 20): [Group!]
-  assets(skip:Int = 0,limit:Int = 20, permission: PermissionQuery!): [Asset!]
+interface Identity {
+  id: ID!
+  accesses(skip:Int = 0,limit:Int = 20, permission: Permission!): [Access!]
 }
 
-type Group {
-  id: String!
+type User implements Identity{
+  id: ID!
+  email: String!
+  groups(skip:Int = 0,limit:Int = 20): [Group!]
+  accesses(skip:Int = 0,limit:Int = 20, permission: Permission!): [Access!] @goField(forceResolver: true)
+}
+
+type Group implements Identity {
+  id: ID!
   name: String!
   users(skip:Int = 0,limit:Int = 20): [User!]
-  assets(skip:Int = 0,limit:Int = 20, permission: PermissionQuery!): [Asset!]
+  accesses(skip:Int = 0,limit:Int = 20, permission: Permission!): [Access!] @goField(forceResolver: true)
 }
 
 # enum for read and write permissions
@@ -35,16 +38,10 @@ enum Permission {
   WRITE
 }
 
-enum PermissionQuery {
-  READ
-  WRITE
-  READ_OR_WRITE
-}
-
 type Access {
   identity: Identity!
-  permission: Permission!
   asset: Asset!
+  permission: Permission!
 }
 
 type Asset {
@@ -126,7 +123,6 @@ type Query {
   tagCategory(id: ID): TagCategory
   tagCategories(skip: Int = 0, limit: Int = 10): [TagCategory!]
   tag(id: ID): Tag!
-
 }
 
 

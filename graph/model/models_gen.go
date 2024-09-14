@@ -10,6 +10,8 @@ import (
 
 type Identity interface {
 	IsIdentity()
+	GetID() string
+	GetAccesses() []*Access
 }
 
 type Tag interface {
@@ -31,8 +33,8 @@ type TagCategory interface {
 
 type Access struct {
 	Identity   Identity   `json:"identity"`
-	Permission Permission `json:"permission"`
 	Asset      *Asset     `json:"asset"`
+	Permission Permission `json:"permission"`
 }
 
 type Asset struct {
@@ -110,13 +112,24 @@ type File struct {
 }
 
 type Group struct {
-	ID     string   `json:"id"`
-	Name   string   `json:"name"`
-	Users  []*User  `json:"users,omitempty"`
-	Assets []*Asset `json:"assets,omitempty"`
+	ID       string    `json:"id"`
+	Name     string    `json:"name"`
+	Users    []*User   `json:"users,omitempty"`
+	Accesses []*Access `json:"accesses,omitempty"`
 }
 
-func (Group) IsIdentity() {}
+func (Group) IsIdentity()        {}
+func (this Group) GetID() string { return this.ID }
+func (this Group) GetAccesses() []*Access {
+	if this.Accesses == nil {
+		return nil
+	}
+	interfaceSlice := make([]*Access, 0, len(this.Accesses))
+	for _, concrete := range this.Accesses {
+		interfaceSlice = append(interfaceSlice, concrete)
+	}
+	return interfaceSlice
+}
 
 type Query struct {
 }
@@ -181,13 +194,24 @@ func (this StaticTagCategory) GetRootTags() []Tag {
 }
 
 type User struct {
-	ID     string   `json:"id"`
-	Email  string   `json:"email"`
-	Groups []*Group `json:"groups,omitempty"`
-	Assets []*Asset `json:"assets,omitempty"`
+	ID       string    `json:"id"`
+	Email    string    `json:"email"`
+	Groups   []*Group  `json:"groups,omitempty"`
+	Accesses []*Access `json:"accesses,omitempty"`
 }
 
-func (User) IsIdentity() {}
+func (User) IsIdentity()        {}
+func (this User) GetID() string { return this.ID }
+func (this User) GetAccesses() []*Access {
+	if this.Accesses == nil {
+		return nil
+	}
+	interfaceSlice := make([]*Access, 0, len(this.Accesses))
+	for _, concrete := range this.Accesses {
+		interfaceSlice = append(interfaceSlice, concrete)
+	}
+	return interfaceSlice
+}
 
 type Permission string
 
@@ -227,48 +251,5 @@ func (e *Permission) UnmarshalGQL(v interface{}) error {
 }
 
 func (e Permission) MarshalGQL(w io.Writer) {
-	fmt.Fprint(w, strconv.Quote(e.String()))
-}
-
-type PermissionQuery string
-
-const (
-	PermissionQueryRead        PermissionQuery = "READ"
-	PermissionQueryWrite       PermissionQuery = "WRITE"
-	PermissionQueryReadOrWrite PermissionQuery = "READ_OR_WRITE"
-)
-
-var AllPermissionQuery = []PermissionQuery{
-	PermissionQueryRead,
-	PermissionQueryWrite,
-	PermissionQueryReadOrWrite,
-}
-
-func (e PermissionQuery) IsValid() bool {
-	switch e {
-	case PermissionQueryRead, PermissionQueryWrite, PermissionQueryReadOrWrite:
-		return true
-	}
-	return false
-}
-
-func (e PermissionQuery) String() string {
-	return string(e)
-}
-
-func (e *PermissionQuery) UnmarshalGQL(v interface{}) error {
-	str, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("enums must be strings")
-	}
-
-	*e = PermissionQuery(str)
-	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid PermissionQuery", str)
-	}
-	return nil
-}
-
-func (e PermissionQuery) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }

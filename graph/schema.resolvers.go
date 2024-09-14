@@ -7,6 +7,7 @@ package graph
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log/slog"
 
 	"github.com/dkrizic/testserver/graph/model"
@@ -287,6 +288,11 @@ func (r *groupResolver) Users(ctx context.Context, obj *model.Group, skip *int, 
 		users = append(users, &user)
 	}
 	return users, nil
+}
+
+// Accesses is the resolver for the accesses field.
+func (r *groupResolver) Accesses(ctx context.Context, obj *model.Group, skip *int, limit *int, permission model.Permission) ([]*model.Access, error) {
+	panic(fmt.Errorf("not implemented: Accesses - accesses"))
 }
 
 // Asset is the resolver for the asset field.
@@ -769,6 +775,11 @@ func (r *userResolver) Groups(ctx context.Context, obj *model.User, skip *int, l
 		groups = append(groups, &group)
 	}
 	return groups, nil
+}
+
+// Accesses is the resolver for the accesses field.
+func (r *userResolver) Accesses(ctx context.Context, obj *model.User, skip *int, limit *int, permission model.Permission) ([]*model.Access, error) {
+	panic(fmt.Errorf("not implemented: Accesses - accesses"))
 }
 
 // Asset returns AssetResolver implementation.
