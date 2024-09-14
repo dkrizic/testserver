@@ -46,6 +46,43 @@ func (r *assetResolver) Files(ctx context.Context, obj *model.Asset, skip *int, 
 	return files, nil
 }
 
+// Tags is the resolver for the tags field.
+func (r *assetResolver) Tags(ctx context.Context, obj *model.Asset, skip *int, limit *int) ([]model.Tag, error) {
+	slog.InfoContext(ctx, "Tags(forAsset)", "id", obj.ID, "skip", skip, "limit", limit)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("db.operation.name", "select"),
+		attribute.Int("skip", *skip),
+		attribute.Int("limit", *limit))
+	span.SetAttributes(attribute.String("id", obj.ID))
+	query := "SELECT tag.id,tag.name,tag.parent_tag_id,tag.value,tag.discriminator FROM tag,asset_tag WHERE tag.id = asset_tag.tag_id and asset_tag.asset_id = ? limit ?,?"
+	span.SetAttributes(
+		attribute.String("db.query.text", query),
+		attribute.String("db.parameter.id", obj.ID))
+	result, err := r.dB.Query(query, obj.ID, skip, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	tags := []model.Tag{}
+	for result.Next() {
+		var it InternalTag
+		err := result.Scan(&it.ID, &it.Name, &it.Parent, &it.Value, &it.Discriminator)
+		if err != nil {
+			return nil, err
+		}
+		slog.DebugContext(ctx, "Scanned row", slog.Group("row", "id", it.ID, "name", it.Name, "parent", it.Parent, "value", it.Value, "discriminator", it.Discriminator))
+		tag, err := it.AsTag()
+		if err != nil {
+			return nil, err
+		}
+		tags = append(tags, tag)
+	}
+	return tags, nil
+}
+
 // ChildTags is the resolver for the childTags field.
 func (r *dynamicTagResolver) ChildTags(ctx context.Context, obj *model.DynamicTag, skip *int, limit *int) ([]model.Tag, error) {
 	slog.InfoContext(ctx, "ChildTags(byDynamicTag)", "id", obj.ID, "skip", skip, "limit", limit)

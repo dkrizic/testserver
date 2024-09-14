@@ -52,7 +52,7 @@ type Asset {
   name: String!
   permissions(skip: Int = 0, limit: Int = 10): [Access!]
   files(skip: Int = 0, limit: Int = 10): [File!] @goField(forceResolver: true)
-  tags(skip: Int = 0, limit: Int = 10): [Tag!]
+  tags(skip: Int = 0, limit: Int = 10): [Tag!] @goField(forceResolver: true)
   # Mobile
 }
 
