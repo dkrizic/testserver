@@ -97,13 +97,14 @@ interface Tag {
   id: ID!
   parentTag: Tag
   childTags(skip: Int = 0, limit: Int = 10): [Tag!]
+  tagCategory: TagCategory!
 }
 
 # Mobile
 type StaticTag implements Tag {
   id: ID!
   name: String!
-  tagCategory: StaticTagCategory!
+  tagCategory: StaticTagCategory! @goField(forceResolver: true)
   parentStaticTag: StaticTag
   parentTag: Tag
   childTags(skip: Int = 0, limit: Int = 10): [Tag!] @goField(forceResolver: true)
@@ -111,7 +112,7 @@ type StaticTag implements Tag {
 
 type DynamicTag implements Tag {
   id: ID!
-  tagCategory: DynamicTagCategory!
+  tagCategory: DynamicTagCategory! @goField(forceResolver: true)
   value: String!
   parentTag: Tag
   childTags(skip: Int = 0, limit: Int = 10): [Tag!] @goField(forceResolver: true)
@@ -124,6 +125,7 @@ type Query {
   identity(skip: Int = 0, limit: Int = 10): [Identity!]!
   tagCategory(id: ID): TagCategory
   tagCategories(skip: Int = 0, limit: Int = 10): [TagCategory!]
+  tag(id: ID): Tag!
 
 }
 

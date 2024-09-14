@@ -17,6 +17,7 @@ type Tag interface {
 	GetID() string
 	GetParentTag() Tag
 	GetChildTags() []Tag
+	GetTagCategory() TagCategory
 }
 
 type TagCategory interface {
@@ -63,6 +64,7 @@ func (this DynamicTag) GetChildTags() []Tag {
 	}
 	return interfaceSlice
 }
+func (this DynamicTag) GetTagCategory() TagCategory { return *this.TagCategory }
 
 type DynamicTagCategory struct {
 	ID                 string        `json:"id"`
@@ -141,6 +143,7 @@ func (this StaticTag) GetChildTags() []Tag {
 	}
 	return interfaceSlice
 }
+func (this StaticTag) GetTagCategory() TagCategory { return *this.TagCategory }
 
 type StaticTagCategory struct {
 	ID                 string        `json:"id"`

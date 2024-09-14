@@ -39,6 +39,7 @@ func (r *assetResolver) Files(ctx context.Context, obj *model.Asset, skip *int, 
 		var file model.File
 		err := result.Scan(&file.ID, &file.Name, &file.Size, &file.MimeType)
 		if err != nil {
+			slog.ErrorContext(ctx, "Error scanning row", "error", err, "id", obj.ID, "type", "file")
 			return nil, err
 		}
 		files = append(files, &file)
@@ -71,6 +72,7 @@ func (r *assetResolver) Tags(ctx context.Context, obj *model.Asset, skip *int, l
 		var it InternalTag
 		err := result.Scan(&it.ID, &it.Name, &it.Parent, &it.Value, &it.Discriminator)
 		if err != nil {
+			slog.ErrorContext(ctx, "Error scanning row", "error", err, "id", obj.ID, "type", "tag")
 			return nil, err
 		}
 		slog.DebugContext(ctx, "Scanned row", slog.Group("row", "id", it.ID, "name", it.Name, "parent", it.Parent, "value", it.Value, "discriminator", it.Discriminator))
@@ -81,6 +83,38 @@ func (r *assetResolver) Tags(ctx context.Context, obj *model.Asset, skip *int, l
 		tags = append(tags, tag)
 	}
 	return tags, nil
+}
+
+// TagCategory is the resolver for the tagCategory field.
+func (r *dynamicTagResolver) TagCategory(ctx context.Context, obj *model.DynamicTag) (*model.DynamicTagCategory, error) {
+	slog.InfoContext(ctx, "TagCategory(byDynamicTag)", "id", obj.ID)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("db.operation.name", "select"))
+	span.SetAttributes(attribute.String("id", obj.ID))
+	query := "SELECT id,name,format FROM tagcategory WHERE id = (SELECT tagcategory_id FROM tag WHERE id = ?)"
+	span.SetAttributes(
+		attribute.String("db.query.text", query),
+		attribute.String("db.parameter.id", obj.ID))
+	result, err := r.dB.Query(query, obj.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	var dtc model.DynamicTagCategory
+	if result.Next() {
+		err := result.Scan(&dtc.ID, &dtc.Name, &dtc.Format)
+		if err != nil {
+			slog.ErrorContext(ctx, "Error scanning row", "error", err, "id", obj.ID, "type", "tagcategory")
+			return nil, err
+		}
+		slog.Debug("Entity", slog.Group("entity", dtc))
+		return &dtc, nil
+	} else {
+		return nil, nil
+	}
 }
 
 // ChildTags is the resolver for the childTags field.
@@ -108,10 +142,11 @@ func (r *dynamicTagResolver) ChildTags(ctx context.Context, obj *model.DynamicTa
 		var it InternalTag
 		err := result.Scan(&it.ID, &it.Name, &it.Parent, &it.Value, &it.Discriminator)
 		if err != nil {
+			slog.ErrorContext(ctx, "Error scanning row", "error", err, "id", obj.ID, "type", "tag")
 			return nil, err
 		}
-		slog.DebugContext(ctx, "Scanned row", slog.Group("row", "id", it.ID, "name", it.Name, "parent", it.Parent, "value", it.Value, "discriminator", it.Discriminator))
 		tag, err := it.AsTag()
+		slog.DebugContext(ctx, "Entity", slog.Group("entity", tag))
 		if err != nil {
 			return nil, err
 		}
@@ -142,6 +177,7 @@ func (r *dynamicTagCategoryResolver) ParentTagCategory(ctx context.Context, obj 
 	if result.Next() {
 		err := result.Scan(&itc.ID, &itc.Name, &itc.Parent, &itc.Discriminator, &itc.Format, &itc.Open)
 		if err != nil {
+			slog.ErrorContext(ctx, "Error scanning row", "error", err, "id", obj.ID, "type", "tagcategory")
 			return nil, err
 		}
 		return itc.AsTagCategory()
@@ -175,12 +211,13 @@ func (r *dynamicTagCategoryResolver) RootTags(ctx context.Context, obj *model.Dy
 		var it InternalTag
 		err := result.Scan(&it.ID, &it.Name, &it.Parent, &it.Value, &it.Discriminator)
 		if err != nil {
+			slog.ErrorContext(ctx, "Error scanning row", "error", err, "id", obj.ID, "type", "tag")
 			return nil, err
 		}
 		slog.DebugContext(ctx, "Scanned row", slog.Group("row", "id", it.ID, "name", it.Name, "parent", it.Parent, "value", it.Value, "discriminator", it.Discriminator))
 		tag, err := it.AsTag()
 		if err != nil {
-			return nil, err
+			return tags, err
 		}
 		tags = append(tags, tag)
 	}
@@ -213,6 +250,7 @@ func (r *groupResolver) Users(ctx context.Context, obj *model.Group, skip *int, 
 		var user model.User
 		err := result.Scan(&user.ID, &user.Email)
 		if err != nil {
+			slog.ErrorContext(ctx, "Error scanning row", "error", err, "id", obj.ID, "type", "user")
 			return nil, err
 		}
 		users = append(users, &user)
@@ -258,6 +296,7 @@ func (r *queryResolver) Asset(ctx context.Context, id *string, skip *int, limit 
 		var asset model.Asset
 		err := result.Scan(&asset.ID, &asset.Name)
 		if err != nil {
+			slog.ErrorContext(ctx, "Error scanning row", "error", err, "id", id, "type", "asset")
 			return nil, err
 		}
 		assets = append(assets, &asset)
@@ -304,6 +343,7 @@ func (r *queryResolver) User(ctx context.Context, id *string, skip *int, limit *
 		var user model.User
 		err := result.Scan(&user.ID, &user.Email)
 		if err != nil {
+			slog.ErrorContext(ctx, "Error scanning row", "error", err, "id", id, "type", "user")
 			return nil, err
 		}
 		users = append(users, &user)
@@ -349,6 +389,7 @@ func (r *queryResolver) Group(ctx context.Context, id *string, skip *int, limit 
 		var group model.Group
 		err := result.Scan(&group.ID, &group.Name)
 		if err != nil {
+			slog.ErrorContext(ctx, "Error scanning row", "error", err, "id", id, "type", "group")
 			return nil, err
 		}
 		groups = append(groups, &group)
@@ -379,6 +420,7 @@ func (r *queryResolver) Identity(ctx context.Context, skip *int, limit *int) ([]
 		var user model.User
 		err := result.Scan(&user.ID, &user.Email)
 		if err != nil {
+			slog.ErrorContext(ctx, "Error scanning row", "error", err, "type", "user")
 			return nil, err
 		}
 		identities = append(identities, user)
@@ -396,6 +438,7 @@ func (r *queryResolver) Identity(ctx context.Context, skip *int, limit *int) ([]
 		var group model.Group
 		err := result.Scan(&group.ID, &group.Name)
 		if err != nil {
+			slog.ErrorContext(ctx, "Error scanning row", "error", err, "type", "group")
 			return nil, err
 		}
 		identities = append(identities, group)
@@ -427,6 +470,7 @@ func (r *queryResolver) TagCategory(ctx context.Context, id *string) (model.TagC
 	for result.Next() {
 		err := result.Scan(&itc.ID, &itc.Name, &itc.Discriminator, &itc.Parent, &itc.Format, &itc.Open)
 		if err != nil {
+			slog.ErrorContext(ctx, "Error scanning row", "error", err, "id", id, "type", "tagcategory")
 			return nil, err
 		}
 	}
@@ -465,6 +509,69 @@ func (r *queryResolver) TagCategories(ctx context.Context, skip *int, limit *int
 	}
 
 	return tagCategories, nil
+}
+
+// Tag is the resolver for the tag field.
+func (r *queryResolver) Tag(ctx context.Context, id *string) (model.Tag, error) {
+	slog.InfoContext(ctx, "Tag", "id", id)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("db.operation.name", "select"))
+	if id != nil {
+		span.SetAttributes(attribute.String("id", *id))
+	}
+
+	query := "SELECT id,name,parent_tag_id,value,discriminator FROM tag WHERE id = ?"
+	span.SetAttributes(attribute.String("db.query.text", query))
+	result, err := r.dB.Query(query, *id)
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	var it InternalTag
+	for result.Next() {
+		err := result.Scan(&it.ID, &it.Name, &it.Parent, &it.Value, &it.Discriminator)
+		if err != nil {
+			slog.ErrorContext(ctx, "Error scanning row", "error", err, "id", id, "type", "tag")
+			return nil, err
+		}
+	}
+	return it.AsTag()
+}
+
+// TagCategory is the resolver for the tagCategory field.
+func (r *staticTagResolver) TagCategory(ctx context.Context, obj *model.StaticTag) (*model.StaticTagCategory, error) {
+	slog.InfoContext(ctx, "TagCategory(byStaticTag)", "id", obj.ID)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("db.operation.name", "select"))
+	span.SetAttributes(attribute.String("id", obj.ID))
+	query := "SELECT tc.id,tc.name,tc.open FROM tagcategory tc, tag t WHERE tc.id = t.tagcategory_id and t.id = ?"
+	span.SetAttributes(
+		attribute.String("db.query.text", query),
+		attribute.String("db.parameter.id", obj.ID))
+	result, err := r.dB.Query(query, obj.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	var stc model.StaticTagCategory
+	if result.Next() {
+		err := result.Scan(&stc.ID, &stc.Name, &stc.IsOpen)
+		if err != nil {
+			slog.ErrorContext(ctx, "Error scanning row", "error", err, "id", obj.ID, "type", "tagcategory")
+			return nil, err
+		}
+		slog.Debug("Scanned row", slog.Group("row", "id", stc.ID, "name", stc.Name, "open", stc.IsOpen))
+		return &stc, nil
+	} else {
+		slog.ErrorContext(ctx, "No rows returned", "id", obj.ID, "type", "tagcategory")
+		return nil, nil
+	}
 }
 
 // ChildTags is the resolver for the childTags field.

@@ -1,7 +1,7 @@
 -- +goose Up
 create table tag (
     id char(36) not null primary key,
-    name varchar(255) not null, -- for static tags
+    name varchar(255), -- for static tags
     discriminator enum ('static','dynamic') not null,
     tagcategory_id char(36) not null,
     parent_tag_id char(36),

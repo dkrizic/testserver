@@ -21,7 +21,7 @@ type InternalTagCategory struct {
 
 type InternalTag struct {
 	ID            string
-	Name          string
+	Name          *string
 	Discriminator string
 	Parent        *string
 	Value         *string
@@ -52,8 +52,10 @@ func (it InternalTag) AsTag() (model.Tag, error) {
 	switch it.Discriminator {
 	case STATIC:
 		tag := model.StaticTag{
-			ID:   it.ID,
-			Name: it.Name,
+			ID: it.ID,
+		}
+		if it.Name != nil {
+			tag.Name = *it.Name
 		}
 		return tag, nil
 	case DYNAMIC:
