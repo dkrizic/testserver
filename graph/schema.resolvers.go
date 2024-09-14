@@ -117,6 +117,37 @@ func (r *dynamicTagResolver) TagCategory(ctx context.Context, obj *model.Dynamic
 	}
 }
 
+// ParentTag is the resolver for the parentTag field.
+func (r *dynamicTagResolver) ParentTag(ctx context.Context, obj *model.DynamicTag) (model.Tag, error) {
+	slog.InfoContext(ctx, "ParentTag(byDynamicTag)", "id", obj.ID)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("db.operation.name", "select"))
+	span.SetAttributes(attribute.String("id", obj.ID))
+	query := "SELECT id,name,parent_tag_id,value,discriminator FROM tag WHERE id = (SELECT parent_tag_id FROM tag WHERE id = ?)"
+	span.SetAttributes(
+		attribute.String("db.query.text", query),
+		attribute.String("db.parameter.id", obj.ID))
+	result, err := r.dB.Query(query, obj.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	var it InternalTag
+	if result.Next() {
+		err := result.Scan(&it.ID, &it.Name, &it.Parent, &it.Value, &it.Discriminator)
+		if err != nil {
+			slog.ErrorContext(ctx, "Error scanning row", "error", err, "id", obj.ID, "type", "tag")
+			return nil, err
+		}
+		return it.AsTag()
+	} else {
+		return nil, nil
+	}
+}
+
 // ChildTags is the resolver for the childTags field.
 func (r *dynamicTagResolver) ChildTags(ctx context.Context, obj *model.DynamicTag, skip *int, limit *int) ([]model.Tag, error) {
 	slog.InfoContext(ctx, "ChildTags(byDynamicTag)", "id", obj.ID, "skip", skip, "limit", limit)
@@ -570,6 +601,36 @@ func (r *staticTagResolver) TagCategory(ctx context.Context, obj *model.StaticTa
 		return &stc, nil
 	} else {
 		slog.ErrorContext(ctx, "No rows returned", "id", obj.ID, "type", "tagcategory")
+		return nil, nil
+	}
+}
+
+// ParentTag is the resolver for the parentTag field.
+func (r *staticTagResolver) ParentTag(ctx context.Context, obj *model.StaticTag) (model.Tag, error) {
+	slog.InfoContext(ctx, "ParentTag(byStaticTag)", "id", obj.ID)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("db.operation.name", "select"))
+	span.SetAttributes(attribute.String("id", obj.ID))
+	query := "SELECT id,name,parent_tag_id,value,discriminator FROM tag WHERE id = (SELECT parent_tag_id FROM tag WHERE id = ?)"
+	span.SetAttributes(
+		attribute.String("db.query.text", query),
+		attribute.String("db.parameter.id", obj.ID))
+	result, err := r.dB.Query(query, obj.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	var it InternalTag
+	if result.Next() {
+		err := result.Scan(&it.ID, &it.Name, &it.Parent, &it.Value, &it.Discriminator)
+		if err != nil {
+			return nil, err
+		}
+		return it.AsTag()
+	} else {
 		return nil, nil
 	}
 }

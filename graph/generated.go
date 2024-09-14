@@ -144,6 +144,7 @@ type AssetResolver interface {
 type DynamicTagResolver interface {
 	TagCategory(ctx context.Context, obj *model.DynamicTag) (*model.DynamicTagCategory, error)
 
+	ParentTag(ctx context.Context, obj *model.DynamicTag) (model.Tag, error)
 	ChildTags(ctx context.Context, obj *model.DynamicTag, skip *int, limit *int) ([]model.Tag, error)
 }
 type DynamicTagCategoryResolver interface {
@@ -166,6 +167,7 @@ type QueryResolver interface {
 type StaticTagResolver interface {
 	TagCategory(ctx context.Context, obj *model.StaticTag) (*model.StaticTagCategory, error)
 
+	ParentTag(ctx context.Context, obj *model.StaticTag) (model.Tag, error)
 	ChildTags(ctx context.Context, obj *model.StaticTag, skip *int, limit *int) ([]model.Tag, error)
 }
 type StaticTagCategoryResolver interface {
@@ -1963,7 +1965,7 @@ func (ec *executionContext) _DynamicTag_parentTag(ctx context.Context, field gra
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.ParentTag, nil
+		return ec.resolvers.DynamicTag().ParentTag(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1981,8 +1983,8 @@ func (ec *executionContext) fieldContext_DynamicTag_parentTag(_ context.Context,
 	fc = &graphql.FieldContext{
 		Object:     "DynamicTag",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("FieldContext.Child cannot be called on type INTERFACE")
 		},
@@ -3583,7 +3585,7 @@ func (ec *executionContext) _StaticTag_parentTag(ctx context.Context, field grap
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.ParentTag, nil
+		return ec.resolvers.StaticTag().ParentTag(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3601,8 +3603,8 @@ func (ec *executionContext) fieldContext_StaticTag_parentTag(_ context.Context, 
 	fc = &graphql.FieldContext{
 		Object:     "StaticTag",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("FieldContext.Child cannot be called on type INTERFACE")
 		},
@@ -6288,7 +6290,38 @@ func (ec *executionContext) _DynamicTag(ctx context.Context, sel ast.SelectionSe
 				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "parentTag":
-			out.Values[i] = ec._DynamicTag_parentTag(ctx, field, obj)
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._DynamicTag_parentTag(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "childTags":
 			field := field
 
@@ -6857,7 +6890,38 @@ func (ec *executionContext) _StaticTag(ctx context.Context, sel ast.SelectionSet
 		case "parentStaticTag":
 			out.Values[i] = ec._StaticTag_parentStaticTag(ctx, field, obj)
 		case "parentTag":
-			out.Values[i] = ec._StaticTag_parentTag(ctx, field, obj)
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._StaticTag_parentTag(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "childTags":
 			field := field
 
