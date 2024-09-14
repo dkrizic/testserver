@@ -100,9 +100,11 @@ func (this DynamicTagCategory) GetRootTags() []Tag {
 }
 
 type File struct {
-	ID    string `json:"id"`
-	Name  string `json:"name"`
-	Asset *Asset `json:"asset"`
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Asset    *Asset `json:"asset"`
+	Size     int    `json:"size"`
+	MimeType string `json:"mimeType"`
 }
 
 type Group struct {

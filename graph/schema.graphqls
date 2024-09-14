@@ -51,7 +51,7 @@ type Asset {
   id: ID!
   name: String!
   permissions(skip: Int = 0, limit: Int = 10): [Access!]
-  files(skip: Int = 0, limit: Int = 10): [File!]
+  files(skip: Int = 0, limit: Int = 10): [File!] @goField(forceResolver: true)
   tags(skip: Int = 0, limit: Int = 10): [Tag!]
   # Mobile
 }
@@ -60,6 +60,8 @@ type File {
   id: ID!
   name: String!
   asset: Asset!
+  size: Int!
+  mimeType: String!
 }
 
 interface TagCategory {

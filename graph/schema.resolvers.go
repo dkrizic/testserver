@@ -14,6 +14,38 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// Files is the resolver for the files field.
+func (r *assetResolver) Files(ctx context.Context, obj *model.Asset, skip *int, limit *int) ([]*model.File, error) {
+	slog.InfoContext(ctx, "Files(forAsset)", "id", obj.ID, "skip", skip, "limit", limit)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.String("db.system", "mysql"),
+		attribute.String("db.operation.name", "select"),
+		attribute.Int("skip", *skip),
+		attribute.Int("limit", *limit))
+	span.SetAttributes(attribute.String("id", obj.ID))
+	query := "SELECT id,name,size,mimetype FROM file WHERE asset_id = ? limit ?,?"
+	span.SetAttributes(
+		attribute.String("db.query.text", query),
+		attribute.String("db.parameter.id", obj.ID))
+	result, err := r.dB.Query(query, obj.ID, skip, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	files := []*model.File{}
+	for result.Next() {
+		var file model.File
+		err := result.Scan(&file.ID, &file.Name, &file.Size, &file.MimeType)
+		if err != nil {
+			return nil, err
+		}
+		files = append(files, &file)
+	}
+	return files, nil
+}
+
 // ChildTags is the resolver for the childTags field.
 func (r *dynamicTagResolver) ChildTags(ctx context.Context, obj *model.DynamicTag, skip *int, limit *int) ([]model.Tag, error) {
 	slog.InfoContext(ctx, "ChildTags(byDynamicTag)", "id", obj.ID, "skip", skip, "limit", limit)
@@ -534,6 +566,9 @@ func (r *userResolver) Groups(ctx context.Context, obj *model.User, skip *int, l
 	return groups, nil
 }
 
+// Asset returns AssetResolver implementation.
+func (r *Resolver) Asset() AssetResolver { return &assetResolver{r} }
+
 // DynamicTag returns DynamicTagResolver implementation.
 func (r *Resolver) DynamicTag() DynamicTagResolver { return &dynamicTagResolver{r} }
 
@@ -559,6 +594,7 @@ func (r *Resolver) StaticTagCategory() StaticTagCategoryResolver {
 // User returns UserResolver implementation.
 func (r *Resolver) User() UserResolver { return &userResolver{r} }
 
+type assetResolver struct{ *Resolver }
 type dynamicTagResolver struct{ *Resolver }
 type dynamicTagCategoryResolver struct{ *Resolver }
 type groupResolver struct{ *Resolver }
