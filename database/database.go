@@ -81,6 +81,13 @@ func NewConnection(ctx context.Context, opts ...Opts) (db *sql.DB, err error) {
 		return nil, err
 	}
 
+	otelsql.ReportDBStatsMetrics(db, otelsql.WithAttributes(
+		semconv.DBSystemMySQL))
+	if err != nil {
+		slog.Warn("Failed to report database stats", "error", err)
+		return nil, err
+	}
+
 	err = db.PingContext(ctx)
 	if err != nil {
 		slog.Warn("Failed to ping database", "error", err)

@@ -87,6 +87,10 @@ func New() (*Config, error) {
 	otelhandler := otelslog.NewHandler(handler)
 	slog.SetDefault(slog.New(otelhandler))
 
+	if c.Service().DatabasePassword() == "" {
+		slog.Warn("Database password not set")
+	}
+
 	return c, nil
 }
 
