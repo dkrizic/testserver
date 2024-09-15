@@ -8,7 +8,9 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/pressly/goose/v3 v3.22.0
 	github.com/ravilushqa/otelgqlgen v0.17.0
+	github.com/uptrace/opentelemetry-go-extra/otelsql v0.3.1
 	github.com/vektah/gqlparser/v2 v2.5.16
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.55.0
 	go.opentelemetry.io/otel v1.30.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.30.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.30.0
@@ -24,6 +26,7 @@ require (
 	github.com/agnivade/levenshtein v1.1.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.4 // indirect
+	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -35,7 +38,6 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sethvargo/go-retry v0.3.0 // indirect
 	github.com/sosodev/duration v1.3.1 // indirect
-	github.com/uptrace/opentelemetry-go-extra/otelsql v0.3.1 // indirect
 	github.com/urfave/cli/v2 v2.27.4 // indirect
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
 	go.opentelemetry.io/contrib v1.30.0 // indirect

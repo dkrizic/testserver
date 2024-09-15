@@ -53,7 +53,11 @@ func (c Config) TokenHandler(handler http.Handler) http.Handler {
 			return nil
 		}
 
-		ctx, span := telemetry.Tracer().Start(r.Context(), "TokenHandler")
+		spanName := "TokenHandler"
+		if !c.checkToken {
+			spanName = "TokenHandler (disabled)"
+		}
+		ctx, span := telemetry.Tracer().Start(r.Context(), spanName)
 		defer span.End()
 		r = r.WithContext(ctx)
 

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/dkrizic/testserver/database"
@@ -12,6 +13,7 @@ import (
 	"github.com/dkrizic/testserver/service/version"
 	"github.com/dkrizic/testserver/telemetry"
 	"github.com/ravilushqa/otelgqlgen"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/trace"
 	"log/slog"
 	"net/http"
@@ -148,28 +150,6 @@ func (s *Service) Run() error {
 	queryHandler := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{Resolvers: resolver}))
 	slog.Info("Binding query handler", "path", queryPath)
 	queryHandler.Use(otelgqlgen.Middleware(otelgqlgen.WithSpanKindSelector(func(operationName string) trace.SpanKind {
-		switch operationName {
-		case "Query/group":
-			return trace.SpanKindClient
-		case "Query/user":
-			return trace.SpanKindClient
-		case "Group/users":
-			return trace.SpanKindClient
-		case "User/groups":
-			return trace.SpanKindClient
-		case "Query/tag":
-			return trace.SpanKindClient
-		case "Query/tagValue":
-			return trace.SpanKindClient
-		case "Tag/assets":
-			return trace.SpanKindClient
-		case "TagValue/tag":
-			return trace.SpanKindClient
-		case "TagValue/asset":
-			return trace.SpanKindClient
-		case "Query/identity":
-			return trace.SpanKindClient
-		}
 		return trace.SpanKindInternal
 	})))
 	mux.Handle(queryPath, queryHandler)
@@ -179,6 +159,7 @@ func (s *Service) Run() error {
 
 	logHandler := log2.LogHandler(mux)
 
+	// tokenHandler -> logHandler
 	tokenHandler := token.NewTokenHandler(
 		token.WithCheckToken(s.CheckToken),
 		token.WithAlwaysPass(func(r *http.Request) bool {
@@ -186,9 +167,18 @@ func (s *Service) Run() error {
 		}),
 	).TokenHandler(logHandler)
 
+	// otelHandler -> tokenHandler
+	otelHandler := otelhttp.NewHandler(tokenHandler, "testserver",
+		otelhttp.WithFilter(func(r *http.Request) bool {
+			return r.URL.Path != healthPath && r.URL.Path != versionPath
+		}),
+		otelhttp.WithSpanNameFormatter(func(operation string, r *http.Request) string {
+			return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
+		}))
+
 	server := &http.Server{
 		Addr:    s.Port,
-		Handler: tokenHandler,
+		Handler: otelHandler,
 	}
 
 	// start server and wait for interrupt signal
