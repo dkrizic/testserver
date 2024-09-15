@@ -28,7 +28,7 @@ func (r *accessResolver) Identity(ctx context.Context, obj *model.Access) (model
 	span.SetAttributes(
 		attribute.String("db.query.text", query),
 		attribute.String("db.parameter.id", obj.ID))
-	result, err := r.dB.Query(query, obj.ID)
+	result, err := r.dB.QueryContext(ctx, query, obj.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +48,7 @@ func (r *accessResolver) Identity(ctx context.Context, obj *model.Access) (model
 	span.SetAttributes(
 		attribute.String("db.query.text", query),
 		attribute.String("db.parameter.id", obj.ID))
-	result, err = r.dB.Query(query, obj.ID)
+	result, err = r.dB.QueryContext(ctx, query, obj.ID)
 	if err != nil {
 		return nil, nil
 	}
@@ -80,7 +80,7 @@ func (r *accessResolver) Asset(ctx context.Context, obj *model.Access) (*model.A
 	span.SetAttributes(
 		attribute.String("db.query.text", query),
 		attribute.String("db.parameter.id", obj.ID))
-	result, err := r.dB.Query(query, obj.ID)
+	result, err := r.dB.QueryContext(ctx, query, obj.ID)
 	if err != nil {
 		return nil, nil
 	}
@@ -113,7 +113,7 @@ func (r *assetResolver) Accesses(ctx context.Context, obj *model.Asset, skip *in
 	span.SetAttributes(
 		attribute.String("db.query.text", query),
 		attribute.String("db.parameter.id", obj.ID))
-	result, err := r.dB.Query(query, obj.ID, skip, limit)
+	result, err := r.dB.QueryContext(ctx, query, obj.ID, skip, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +146,7 @@ func (r *assetResolver) Files(ctx context.Context, obj *model.Asset, skip *int, 
 	span.SetAttributes(
 		attribute.String("db.query.text", query),
 		attribute.String("db.parameter.id", obj.ID))
-	result, err := r.dB.Query(query, obj.ID, skip, limit)
+	result, err := r.dB.QueryContext(ctx, query, obj.ID, skip, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +179,7 @@ func (r *assetResolver) Tags(ctx context.Context, obj *model.Asset, skip *int, l
 	span.SetAttributes(
 		attribute.String("db.query.text", query),
 		attribute.String("db.parameter.id", obj.ID))
-	result, err := r.dB.Query(query, obj.ID, skip, limit)
+	result, err := r.dB.QueryContext(ctx, query, obj.ID, skip, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -215,7 +215,7 @@ func (r *dynamicTagResolver) TagCategory(ctx context.Context, obj *model.Dynamic
 	span.SetAttributes(
 		attribute.String("db.query.text", query),
 		attribute.String("db.parameter.id", obj.ID))
-	result, err := r.dB.Query(query, obj.ID)
+	result, err := r.dB.QueryContext(ctx, query, obj.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -247,7 +247,7 @@ func (r *dynamicTagResolver) ParentTag(ctx context.Context, obj *model.DynamicTa
 	span.SetAttributes(
 		attribute.String("db.query.text", query),
 		attribute.String("db.parameter.id", obj.ID))
-	result, err := r.dB.Query(query, obj.ID)
+	result, err := r.dB.QueryContext(ctx, query, obj.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -280,7 +280,7 @@ func (r *dynamicTagResolver) ChildTags(ctx context.Context, obj *model.DynamicTa
 	span.SetAttributes(
 		attribute.String("db.query.text", query),
 		attribute.String("db.parameter.id", obj.ID))
-	result, err := r.dB.Query(query, obj.ID)
+	result, err := r.dB.QueryContext(ctx, query, obj.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -316,7 +316,7 @@ func (r *dynamicTagCategoryResolver) ParentTagCategory(ctx context.Context, obj 
 	span.SetAttributes(
 		attribute.String("db.query.text", query),
 		attribute.String("db.parameter.id", obj.ID))
-	result, err := r.dB.Query(query, obj.ID)
+	result, err := r.dB.QueryContext(ctx, query, obj.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -349,7 +349,7 @@ func (r *dynamicTagCategoryResolver) RootTags(ctx context.Context, obj *model.Dy
 	span.SetAttributes(
 		attribute.String("db.query.text", query),
 		attribute.String("db.parameter.id", obj.ID))
-	result, err := r.dB.Query(query, obj.ID, skip, limit)
+	result, err := r.dB.QueryContext(ctx, query, obj.ID, skip, limit)
 	if err != nil {
 		return nil, nil
 	}
@@ -388,7 +388,7 @@ func (r *groupResolver) Users(ctx context.Context, obj *model.Group, skip *int, 
 	span.SetAttributes(
 		attribute.String("db.query.text", query),
 		attribute.String("db.parameter.id", obj.ID))
-	result, err := r.dB.Query(query, obj.ID, skip, limit)
+	result, err := r.dB.QueryContext(ctx, query, obj.ID, skip, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -421,7 +421,7 @@ func (r *groupResolver) Accesses(ctx context.Context, obj *model.Group, skip *in
 	span.SetAttributes(
 		attribute.String("db.query.text", query),
 		attribute.String("db.parameter.id", obj.ID))
-	result, err := r.dB.Query(query, obj.ID, skip, limit)
+	result, err := r.dB.QueryContext(ctx, query, obj.ID, skip, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -459,14 +459,14 @@ func (r *queryResolver) Asset(ctx context.Context, id *string, skip *int, limit 
 		span.SetAttributes(
 			attribute.String("db.query.text", query),
 			attribute.String("db.query.parameter.id", *id))
-		result, err = r.dB.Query(query, *id)
+		result, err = r.dB.QueryContext(ctx, query, *id)
 		if err != nil {
 			return nil, err
 		}
 	} else {
 		query := "SELECT id,name FROM asset LIMIT ?,?"
 		span.SetAttributes(attribute.String("db.query.text", query))
-		result, err = r.dB.Query(query, skip, limit)
+		result, err = r.dB.QueryContext(ctx, query, skip, limit)
 		if err != nil {
 			return nil, err
 		}
@@ -506,14 +506,14 @@ func (r *queryResolver) User(ctx context.Context, id *string, skip *int, limit *
 		span.SetAttributes(
 			attribute.String("db.query.text", query),
 			attribute.String("db.query.parameter.id", *id))
-		result, err = r.dB.Query(query, *id)
+		result, err = r.dB.QueryContext(ctx, query, *id)
 		if err != nil {
 			return nil, err
 		}
 	} else {
 		query := "SELECT id,email FROM user LIMIT ?,?"
 		span.SetAttributes(attribute.String("db.query.text", query))
-		result, err = r.dB.Query(query, *skip, *limit)
+		result, err = r.dB.QueryContext(ctx, query, *skip, *limit)
 		if err != nil {
 			return nil, err
 		}
@@ -552,14 +552,14 @@ func (r *queryResolver) Group(ctx context.Context, id *string, skip *int, limit 
 		span.SetAttributes(
 			attribute.String("db.query.text", query),
 			attribute.String("db.query.parameter.id", *id))
-		result, err = r.dB.Query(query, *id)
+		result, err = r.dB.QueryContext(ctx, query, *id)
 		if err != nil {
 			return nil, err
 		}
 	} else {
 		query := "SELECT id,name FROM `group` LIMIT ?,?"
 		span.SetAttributes(attribute.String("db.query.text", query))
-		result, err = r.dB.Query(query, *skip, *limit)
+		result, err = r.dB.QueryContext(ctx, query, *skip, *limit)
 		if err != nil {
 			return nil, err
 		}
@@ -591,7 +591,7 @@ func (r *queryResolver) Identity(ctx context.Context, skip *int, limit *int) ([]
 	query := "SELECT id,email FROM user LIMIT ?,?"
 	span.SetAttributes(attribute.String("db.query.text", query))
 
-	result, err := r.dB.Query(query, *skip, *limit)
+	result, err := r.dB.QueryContext(ctx, query, *skip, *limit)
 	if err != nil {
 		return nil, err
 	}
@@ -610,7 +610,7 @@ func (r *queryResolver) Identity(ctx context.Context, skip *int, limit *int) ([]
 
 	query = "SELECT id,name FROM `group` LIMIT ?,?"
 	span.SetAttributes(attribute.String("db.query.text", query))
-	result, err = r.dB.Query(query, *skip, *limit)
+	result, err = r.dB.QueryContext(ctx, query, *skip, *limit)
 	if err != nil {
 		return nil, err
 	}
@@ -642,7 +642,7 @@ func (r *queryResolver) TagCategory(ctx context.Context, id *string) (model.TagC
 
 	query := "SELECT id,name FROM tagcategory WHERE id = ?"
 	span.SetAttributes(attribute.String("db.query.text", query))
-	result, err := r.dB.Query(query, *id)
+	result, err := r.dB.QueryContext(ctx, query, *id)
 	if err != nil {
 		return model.StaticTagCategory{}, err
 	}
@@ -670,7 +670,7 @@ func (r *queryResolver) TagCategories(ctx context.Context, skip *int, limit *int
 		attribute.Int("limit", *limit))
 	query := "SELECT id,name,discriminator,parent,format,open FROM tagcategory LIMIT ?,?"
 	span.SetAttributes(attribute.String("db.query.text", query))
-	result, err := r.dB.Query(query, *skip, *limit)
+	result, err := r.dB.QueryContext(ctx, query, *skip, *limit)
 	if err != nil {
 		return nil, err
 	}
@@ -706,7 +706,7 @@ func (r *queryResolver) Tag(ctx context.Context, id *string) (model.Tag, error) 
 
 	query := "SELECT id,name,parent_tag_id,value,discriminator FROM tag WHERE id = ?"
 	span.SetAttributes(attribute.String("db.query.text", query))
-	result, err := r.dB.Query(query, *id)
+	result, err := r.dB.QueryContext(ctx, query, *id)
 	if err != nil {
 		return nil, err
 	}
@@ -735,7 +735,7 @@ func (r *staticTagResolver) TagCategory(ctx context.Context, obj *model.StaticTa
 	span.SetAttributes(
 		attribute.String("db.query.text", query),
 		attribute.String("db.parameter.id", obj.ID))
-	result, err := r.dB.Query(query, obj.ID)
+	result, err := r.dB.QueryContext(ctx, query, obj.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -768,7 +768,7 @@ func (r *staticTagResolver) ParentTag(ctx context.Context, obj *model.StaticTag)
 	span.SetAttributes(
 		attribute.String("db.query.text", query),
 		attribute.String("db.parameter.id", obj.ID))
-	result, err := r.dB.Query(query, obj.ID)
+	result, err := r.dB.QueryContext(ctx, query, obj.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -800,7 +800,7 @@ func (r *staticTagResolver) ChildTags(ctx context.Context, obj *model.StaticTag,
 	span.SetAttributes(
 		attribute.String("db.query.text", query),
 		attribute.String("db.parameter.id", obj.ID))
-	result, err := r.dB.Query(query, obj.ID)
+	result, err := r.dB.QueryContext(ctx, query, obj.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -835,7 +835,7 @@ func (r *staticTagCategoryResolver) ParentTagCategory(ctx context.Context, obj *
 	span.SetAttributes(
 		attribute.String("db.query.text", query),
 		attribute.String("db.parameter.id", obj.ID))
-	result, err := r.dB.Query(query, obj.ID)
+	result, err := r.dB.QueryContext(ctx, query, obj.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -867,7 +867,7 @@ func (r *staticTagCategoryResolver) RootTags(ctx context.Context, obj *model.Sta
 	span.SetAttributes(
 		attribute.String("db.query.text", query),
 		attribute.String("db.parameter.id", obj.ID))
-	result, err := r.dB.Query(query, obj.ID, skip, limit)
+	result, err := r.dB.QueryContext(ctx, query, obj.ID, skip, limit)
 	if err != nil {
 		return nil, nil
 	}
@@ -904,7 +904,7 @@ func (r *userResolver) Groups(ctx context.Context, obj *model.User, skip *int, l
 	span.SetAttributes(
 		attribute.String("db.query.text", query),
 		attribute.String("db.parameter.id", obj.ID))
-	result, err := r.dB.Query(query, obj.ID, skip, limit)
+	result, err := r.dB.QueryContext(ctx, query, obj.ID, skip, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -936,7 +936,7 @@ func (r *userResolver) Accesses(ctx context.Context, obj *model.User, skip *int,
 	span.SetAttributes(
 		attribute.String("db.query.text", query),
 		attribute.String("db.parameter.id", obj.ID))
-	result, err := r.dB.Query(query, obj.ID, skip, limit)
+	result, err := r.dB.QueryContext(ctx, query, obj.ID, skip, limit)
 	if err != nil {
 		return nil, err
 	}

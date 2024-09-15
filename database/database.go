@@ -76,7 +76,8 @@ func NewConnection(opts ...Opts) (db *sql.DB, err error) {
 		return nil, err
 	}
 
-	err = db.Ping()
+	ctx := context.Background()
+	err = db.PingContext(ctx)
 	if err != nil {
 		slog.Warn("Failed to ping database", "error", err)
 		return
@@ -95,7 +96,8 @@ func CleanSchema(db *sql.DB) error {
 		return err
 	}
 
-	err = goose.DownTo(db, "schema", 0)
+	ctx := context.Background()
+	err = goose.DownToContext(ctx, db, "schema", 0)
 	if err != nil {
 		return err
 	}
@@ -112,7 +114,8 @@ func MigrateSchema(db *sql.DB) error {
 		return err
 	}
 
-	err = goose.Up(db, "schema")
+	ctx := context.Background()
+	err = goose.UpContext(ctx, db, "schema")
 	if err != nil {
 		return err
 	}

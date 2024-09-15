@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"github.com/99designs/gqlgen/client"
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/dkrizic/testserver/config"
@@ -17,6 +18,8 @@ func TestGraphQl(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load configuration: %v", err)
 	}
+
+	ctx := context.Background()
 
 	db, err := database.NewConnection(
 		database.Host(config.Service().DatabaseHost()),

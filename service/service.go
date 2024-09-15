@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/dkrizic/testserver/database"
@@ -102,6 +103,8 @@ func NewService(opts ...Opts) (*Service, error) {
 
 func (s *Service) Run() error {
 	slog.Info("Starting server")
+
+	ctx := context.Background()
 
 	db, err := database.NewConnection(
 		// database.Host("localhost"),
