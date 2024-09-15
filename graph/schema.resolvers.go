@@ -19,15 +19,9 @@ import (
 func (r *accessResolver) Identity(ctx context.Context, obj *model.Access) (model.Identity, error) {
 	slog.InfoContext(ctx, "Identity(byAccess)", "id", obj.ID)
 	span := trace.SpanFromContext(ctx)
-	span.SetAttributes(
-		attribute.String("db.system", "mysql"),
-		attribute.String("db.operation.name", "select"))
 	span.SetAttributes(attribute.String("id", obj.ID))
 
 	query := "SELECT id,email FROM user WHERE id = (SELECT identity_id FROM access WHERE id = ?)"
-	span.SetAttributes(
-		attribute.String("db.query.text", query),
-		attribute.String("db.parameter.id", obj.ID))
 	result, err := r.dB.QueryContext(ctx, query, obj.ID)
 	if err != nil {
 		return nil, err
@@ -45,9 +39,6 @@ func (r *accessResolver) Identity(ctx context.Context, obj *model.Access) (model
 	}
 
 	query = "SELECT id,name FROM `group` WHERE id = (SELECT identity_id FROM access WHERE id = ?)"
-	span.SetAttributes(
-		attribute.String("db.query.text", query),
-		attribute.String("db.parameter.id", obj.ID))
 	result, err = r.dB.QueryContext(ctx, query, obj.ID)
 	if err != nil {
 		return nil, nil
@@ -72,14 +63,8 @@ func (r *accessResolver) Asset(ctx context.Context, obj *model.Access) (*model.A
 	slog.InfoContext(ctx, "Asset(byAccess)", "id", obj.ID)
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(
-		attribute.String("db.system", "mysql"),
-		attribute.String("db.operation.name", "select"))
-	span.SetAttributes(
 		attribute.String("id", obj.ID))
 	query := "SELECT id,name FROM asset WHERE id = (SELECT asset_id FROM access WHERE id = ?)"
-	span.SetAttributes(
-		attribute.String("db.query.text", query),
-		attribute.String("db.parameter.id", obj.ID))
 	result, err := r.dB.QueryContext(ctx, query, obj.ID)
 	if err != nil {
 		return nil, nil
@@ -104,15 +89,10 @@ func (r *assetResolver) Accesses(ctx context.Context, obj *model.Asset, skip *in
 	slog.InfoContext(ctx, "Accesses(forAsset)", "id", obj.ID, "skip", skip, "limit", limit)
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(
-		attribute.String("db.system", "mysql"),
-		attribute.String("db.operation.name", "select"),
 		attribute.Int("skip", *skip),
-		attribute.Int("limit", *limit))
-	span.SetAttributes(attribute.String("id", obj.ID))
+		attribute.Int("limit", *limit),
+		attribute.String("id", obj.ID))
 	query := "SELECT id, permission FROM access WHERE asset_id  = ? limit ?,?"
-	span.SetAttributes(
-		attribute.String("db.query.text", query),
-		attribute.String("db.parameter.id", obj.ID))
 	result, err := r.dB.QueryContext(ctx, query, obj.ID, skip, limit)
 	if err != nil {
 		return nil, err
@@ -137,15 +117,10 @@ func (r *assetResolver) Files(ctx context.Context, obj *model.Asset, skip *int, 
 	slog.InfoContext(ctx, "Files(forAsset)", "id", obj.ID, "skip", skip, "limit", limit)
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(
-		attribute.String("db.system", "mysql"),
-		attribute.String("db.operation.name", "select"),
 		attribute.Int("skip", *skip),
-		attribute.Int("limit", *limit))
-	span.SetAttributes(attribute.String("id", obj.ID))
+		attribute.Int("limit", *limit),
+		attribute.String("id", obj.ID))
 	query := "SELECT id,name,size,mimetype FROM file WHERE asset_id = ? limit ?,?"
-	span.SetAttributes(
-		attribute.String("db.query.text", query),
-		attribute.String("db.parameter.id", obj.ID))
 	result, err := r.dB.QueryContext(ctx, query, obj.ID, skip, limit)
 	if err != nil {
 		return nil, err
@@ -170,15 +145,10 @@ func (r *assetResolver) Tags(ctx context.Context, obj *model.Asset, skip *int, l
 	slog.InfoContext(ctx, "Tags(forAsset)", "id", obj.ID, "skip", skip, "limit", limit)
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(
-		attribute.String("db.system", "mysql"),
-		attribute.String("db.operation.name", "select"),
 		attribute.Int("skip", *skip),
-		attribute.Int("limit", *limit))
-	span.SetAttributes(attribute.String("id", obj.ID))
+		attribute.Int("limit", *limit),
+		attribute.String("id", obj.ID))
 	query := "SELECT tag.id,tag.name,tag.parent_tag_id,tag.value,tag.discriminator FROM tag,asset_tag WHERE tag.id = asset_tag.tag_id and asset_tag.asset_id = ? limit ?,?"
-	span.SetAttributes(
-		attribute.String("db.query.text", query),
-		attribute.String("db.parameter.id", obj.ID))
 	result, err := r.dB.QueryContext(ctx, query, obj.ID, skip, limit)
 	if err != nil {
 		return nil, err
@@ -207,14 +177,8 @@ func (r *assetResolver) Tags(ctx context.Context, obj *model.Asset, skip *int, l
 func (r *dynamicTagResolver) TagCategory(ctx context.Context, obj *model.DynamicTag) (*model.DynamicTagCategory, error) {
 	slog.InfoContext(ctx, "TagCategory(byDynamicTag)", "id", obj.ID)
 	span := trace.SpanFromContext(ctx)
-	span.SetAttributes(
-		attribute.String("db.system", "mysql"),
-		attribute.String("db.operation.name", "select"))
 	span.SetAttributes(attribute.String("id", obj.ID))
 	query := "SELECT id,name,format FROM tagcategory WHERE id = (SELECT tagcategory_id FROM tag WHERE id = ?)"
-	span.SetAttributes(
-		attribute.String("db.query.text", query),
-		attribute.String("db.parameter.id", obj.ID))
 	result, err := r.dB.QueryContext(ctx, query, obj.ID)
 	if err != nil {
 		return nil, err
@@ -239,14 +203,8 @@ func (r *dynamicTagResolver) TagCategory(ctx context.Context, obj *model.Dynamic
 func (r *dynamicTagResolver) ParentTag(ctx context.Context, obj *model.DynamicTag) (model.Tag, error) {
 	slog.InfoContext(ctx, "ParentTag(byDynamicTag)", "id", obj.ID)
 	span := trace.SpanFromContext(ctx)
-	span.SetAttributes(
-		attribute.String("db.system", "mysql"),
-		attribute.String("db.operation.name", "select"))
 	span.SetAttributes(attribute.String("id", obj.ID))
 	query := "SELECT id,name,parent_tag_id,value,discriminator FROM tag WHERE id = (SELECT parent_tag_id FROM tag WHERE id = ?)"
-	span.SetAttributes(
-		attribute.String("db.query.text", query),
-		attribute.String("db.parameter.id", obj.ID))
 	result, err := r.dB.QueryContext(ctx, query, obj.ID)
 	if err != nil {
 		return nil, err
@@ -271,15 +229,10 @@ func (r *dynamicTagResolver) ChildTags(ctx context.Context, obj *model.DynamicTa
 	slog.InfoContext(ctx, "ChildTags(byDynamicTag)", "id", obj.ID, "skip", skip, "limit", limit)
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(
-		attribute.String("db.system", "mysql"),
-		attribute.String("db.operation.name", "select"),
 		attribute.Int("skip", *skip),
-		attribute.Int("limit", *limit))
-	span.SetAttributes(attribute.String("id", obj.ID))
+		attribute.Int("limit", *limit),
+		attribute.String("id", obj.ID))
 	query := "SELECT id,name,parent_tag_id,value,discriminator FROM tag WHERE parent_tag_id = ?"
-	span.SetAttributes(
-		attribute.String("db.query.text", query),
-		attribute.String("db.parameter.id", obj.ID))
 	result, err := r.dB.QueryContext(ctx, query, obj.ID)
 	if err != nil {
 		return nil, err
@@ -310,12 +263,9 @@ func (r *dynamicTagCategoryResolver) ParentTagCategory(ctx context.Context, obj 
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(
 		attribute.String("db.system", "mysql"),
-		attribute.String("db.operation.name", "select"))
-	span.SetAttributes(attribute.String("id", obj.ID))
+		attribute.String("db.operation.name", "select"),
+		attribute.String("id", obj.ID))
 	query := "SELECT p.id,p.name,p.parent,p.discriminator, p.format, p.open FROM tagcategory p, tagcategory this WHERE this.parent = p.id and this.id = ?"
-	span.SetAttributes(
-		attribute.String("db.query.text", query),
-		attribute.String("db.parameter.id", obj.ID))
 	result, err := r.dB.QueryContext(ctx, query, obj.ID)
 	if err != nil {
 		return nil, err
@@ -340,15 +290,10 @@ func (r *dynamicTagCategoryResolver) RootTags(ctx context.Context, obj *model.Dy
 	slog.InfoContext(ctx, "RootTags(byDynamicTagCategory)", "id", obj.ID, "skip", skip, "limit", limit)
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(
-		attribute.String("db.system", "mysql"),
-		attribute.String("db.operation.name", "select"),
 		attribute.Int("skip", *skip),
-		attribute.Int("limit", *limit))
-	span.SetAttributes(attribute.String("id", obj.ID))
+		attribute.Int("limit", *limit),
+		attribute.String("id", obj.ID))
 	query := "SELECT id,name,parent_tag_id,value,discriminator FROM tag WHERE parent_tag_id is null and tagcategory_id = ? limit ?,?"
-	span.SetAttributes(
-		attribute.String("db.query.text", query),
-		attribute.String("db.parameter.id", obj.ID))
 	result, err := r.dB.QueryContext(ctx, query, obj.ID, skip, limit)
 	if err != nil {
 		return nil, nil
@@ -379,15 +324,10 @@ func (r *groupResolver) Users(ctx context.Context, obj *model.Group, skip *int, 
 	slog.InfoContext(ctx, "Users(forGroup)", "id", obj.ID, "skip", skip, "limit", limit)
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(
-		attribute.String("db.system", "mysql"),
-		attribute.String("db.operation.name", "select"),
 		attribute.Int("skip", *skip),
 		attribute.Int("limit", *limit))
 	span.SetAttributes(attribute.String("id", obj.ID))
 	query := "SELECT user.id,user.email FROM user,user_group where user_group.user_id = user.id and user_group.group_id = ? limit ?,?"
-	span.SetAttributes(
-		attribute.String("db.query.text", query),
-		attribute.String("db.parameter.id", obj.ID))
 	result, err := r.dB.QueryContext(ctx, query, obj.ID, skip, limit)
 	if err != nil {
 		return nil, err
@@ -412,15 +352,10 @@ func (r *groupResolver) Accesses(ctx context.Context, obj *model.Group, skip *in
 	slog.InfoContext(ctx, "Accesses(forGroup)", "id", obj.ID, "skip", skip, "limit", limit)
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(
-		attribute.String("db.system", "mysql"),
-		attribute.String("db.operation.name", "select"),
 		attribute.Int("skip", *skip),
-		attribute.Int("limit", *limit))
-	span.SetAttributes(attribute.String("id", obj.ID))
+		attribute.Int("limit", *limit),
+		attribute.String("id", obj.ID))
 	query := "SELECT id, permission FROM access WHERE discriminator = 'group' and access.identity_id  = ? limit ?,?"
-	span.SetAttributes(
-		attribute.String("db.query.text", query),
-		attribute.String("db.parameter.id", obj.ID))
 	result, err := r.dB.QueryContext(ctx, query, obj.ID, skip, limit)
 	if err != nil {
 		return nil, err
@@ -444,8 +379,6 @@ func (r *groupResolver) Accesses(ctx context.Context, obj *model.Group, skip *in
 func (r *queryResolver) Asset(ctx context.Context, id *string, skip *int, limit *int) ([]*model.Asset, error) {
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(
-		attribute.String("db.system", "mysql"),
-		attribute.String("db.operation.name", "select"),
 		attribute.Int("skip", *skip),
 		attribute.Int("limit", *limit))
 	if id != nil {
@@ -456,16 +389,12 @@ func (r *queryResolver) Asset(ctx context.Context, id *string, skip *int, limit 
 	var err error
 	if id != nil {
 		query := "SELECT id,name FROM asset WHERE id = ?"
-		span.SetAttributes(
-			attribute.String("db.query.text", query),
-			attribute.String("db.query.parameter.id", *id))
 		result, err = r.dB.QueryContext(ctx, query, *id)
 		if err != nil {
 			return nil, err
 		}
 	} else {
 		query := "SELECT id,name FROM asset LIMIT ?,?"
-		span.SetAttributes(attribute.String("db.query.text", query))
 		result, err = r.dB.QueryContext(ctx, query, skip, limit)
 		if err != nil {
 			return nil, err
@@ -492,8 +421,6 @@ func (r *queryResolver) User(ctx context.Context, id *string, skip *int, limit *
 	slog.InfoContext(ctx, "User", "id", id, "skip", skip, "limit", limit)
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(
-		attribute.String("db.system", "mysql"),
-		attribute.String("db.operation.name", "select"),
 		attribute.Int("skip", *skip),
 		attribute.Int("limit", *limit))
 	if id != nil {
@@ -503,16 +430,12 @@ func (r *queryResolver) User(ctx context.Context, id *string, skip *int, limit *
 	var err error
 	if id != nil {
 		query := "SELECT id,email FROM user WHERE id = ?"
-		span.SetAttributes(
-			attribute.String("db.query.text", query),
-			attribute.String("db.query.parameter.id", *id))
 		result, err = r.dB.QueryContext(ctx, query, *id)
 		if err != nil {
 			return nil, err
 		}
 	} else {
 		query := "SELECT id,email FROM user LIMIT ?,?"
-		span.SetAttributes(attribute.String("db.query.text", query))
 		result, err = r.dB.QueryContext(ctx, query, *skip, *limit)
 		if err != nil {
 			return nil, err
@@ -538,8 +461,6 @@ func (r *queryResolver) Group(ctx context.Context, id *string, skip *int, limit 
 	slog.InfoContext(ctx, "Group", "id", id, "skip", skip, "limit", limit)
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(
-		attribute.String("db.system", "mysql"),
-		attribute.String("db.operation.name", "select"),
 		attribute.Int("skip", *skip),
 		attribute.Int("limit", *limit))
 	if id != nil {
@@ -549,16 +470,12 @@ func (r *queryResolver) Group(ctx context.Context, id *string, skip *int, limit 
 	var err error
 	if id != nil {
 		query := "SELECT id,name FROM group WHERE id = ?"
-		span.SetAttributes(
-			attribute.String("db.query.text", query),
-			attribute.String("db.query.parameter.id", *id))
 		result, err = r.dB.QueryContext(ctx, query, *id)
 		if err != nil {
 			return nil, err
 		}
 	} else {
 		query := "SELECT id,name FROM `group` LIMIT ?,?"
-		span.SetAttributes(attribute.String("db.query.text", query))
 		result, err = r.dB.QueryContext(ctx, query, *skip, *limit)
 		if err != nil {
 			return nil, err
@@ -584,12 +501,9 @@ func (r *queryResolver) Identity(ctx context.Context, skip *int, limit *int) ([]
 	slog.InfoContext(ctx, "Identity", "skip", skip, "limit", limit)
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(
-		attribute.String("db.system", "mysql"),
-		attribute.String("db.operation.name", "select"),
 		attribute.Int("skip", *skip),
 		attribute.Int("limit", *limit))
 	query := "SELECT id,email FROM user LIMIT ?,?"
-	span.SetAttributes(attribute.String("db.query.text", query))
 
 	result, err := r.dB.QueryContext(ctx, query, *skip, *limit)
 	if err != nil {
@@ -609,7 +523,6 @@ func (r *queryResolver) Identity(ctx context.Context, skip *int, limit *int) ([]
 	}
 
 	query = "SELECT id,name FROM `group` LIMIT ?,?"
-	span.SetAttributes(attribute.String("db.query.text", query))
 	result, err = r.dB.QueryContext(ctx, query, *skip, *limit)
 	if err != nil {
 		return nil, err
@@ -633,15 +546,11 @@ func (r *queryResolver) Identity(ctx context.Context, skip *int, limit *int) ([]
 func (r *queryResolver) TagCategory(ctx context.Context, id *string) (model.TagCategory, error) {
 	slog.InfoContext(ctx, "TagCategory", "id", id)
 	span := trace.SpanFromContext(ctx)
-	span.SetAttributes(
-		attribute.String("db.system", "mysql"),
-		attribute.String("db.operation.name", "select"))
 	if id != nil {
 		span.SetAttributes(attribute.String("id", *id))
 	}
 
 	query := "SELECT id,name FROM tagcategory WHERE id = ?"
-	span.SetAttributes(attribute.String("db.query.text", query))
 	result, err := r.dB.QueryContext(ctx, query, *id)
 	if err != nil {
 		return model.StaticTagCategory{}, err
@@ -664,12 +573,9 @@ func (r *queryResolver) TagCategories(ctx context.Context, skip *int, limit *int
 	slog.InfoContext(ctx, "TagCategories", "skip", skip, "limit", limit)
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(
-		attribute.String("db.system", "mysql"),
-		attribute.String("db.operation.name", "select"),
 		attribute.Int("skip", *skip),
 		attribute.Int("limit", *limit))
 	query := "SELECT id,name,discriminator,parent,format,open FROM tagcategory LIMIT ?,?"
-	span.SetAttributes(attribute.String("db.query.text", query))
 	result, err := r.dB.QueryContext(ctx, query, *skip, *limit)
 	if err != nil {
 		return nil, err
@@ -697,15 +603,11 @@ func (r *queryResolver) TagCategories(ctx context.Context, skip *int, limit *int
 func (r *queryResolver) Tag(ctx context.Context, id *string) (model.Tag, error) {
 	slog.InfoContext(ctx, "Tag", "id", id)
 	span := trace.SpanFromContext(ctx)
-	span.SetAttributes(
-		attribute.String("db.system", "mysql"),
-		attribute.String("db.operation.name", "select"))
 	if id != nil {
 		span.SetAttributes(attribute.String("id", *id))
 	}
 
 	query := "SELECT id,name,parent_tag_id,value,discriminator FROM tag WHERE id = ?"
-	span.SetAttributes(attribute.String("db.query.text", query))
 	result, err := r.dB.QueryContext(ctx, query, *id)
 	if err != nil {
 		return nil, err
@@ -727,14 +629,8 @@ func (r *queryResolver) Tag(ctx context.Context, id *string) (model.Tag, error) 
 func (r *staticTagResolver) TagCategory(ctx context.Context, obj *model.StaticTag) (*model.StaticTagCategory, error) {
 	slog.InfoContext(ctx, "TagCategory(byStaticTag)", "id", obj.ID)
 	span := trace.SpanFromContext(ctx)
-	span.SetAttributes(
-		attribute.String("db.system", "mysql"),
-		attribute.String("db.operation.name", "select"))
 	span.SetAttributes(attribute.String("id", obj.ID))
 	query := "SELECT tc.id,tc.name,tc.open FROM tagcategory tc, tag t WHERE tc.id = t.tagcategory_id and t.id = ?"
-	span.SetAttributes(
-		attribute.String("db.query.text", query),
-		attribute.String("db.parameter.id", obj.ID))
 	result, err := r.dB.QueryContext(ctx, query, obj.ID)
 	if err != nil {
 		return nil, err
@@ -760,14 +656,8 @@ func (r *staticTagResolver) TagCategory(ctx context.Context, obj *model.StaticTa
 func (r *staticTagResolver) ParentTag(ctx context.Context, obj *model.StaticTag) (model.Tag, error) {
 	slog.InfoContext(ctx, "ParentTag(byStaticTag)", "id", obj.ID)
 	span := trace.SpanFromContext(ctx)
-	span.SetAttributes(
-		attribute.String("db.system", "mysql"),
-		attribute.String("db.operation.name", "select"))
 	span.SetAttributes(attribute.String("id", obj.ID))
 	query := "SELECT id,name,parent_tag_id,value,discriminator FROM tag WHERE id = (SELECT parent_tag_id FROM tag WHERE id = ?)"
-	span.SetAttributes(
-		attribute.String("db.query.text", query),
-		attribute.String("db.parameter.id", obj.ID))
 	result, err := r.dB.QueryContext(ctx, query, obj.ID)
 	if err != nil {
 		return nil, err
@@ -791,15 +681,10 @@ func (r *staticTagResolver) ChildTags(ctx context.Context, obj *model.StaticTag,
 	slog.InfoContext(ctx, "ChildTags(byStaticTag)", "id", obj.ID, "skip", skip, "limit", limit)
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(
-		attribute.String("db.system", "mysql"),
-		attribute.String("db.operation.name", "select"),
 		attribute.Int("skip", *skip),
-		attribute.Int("limit", *limit))
-	span.SetAttributes(attribute.String("id", obj.ID))
+		attribute.Int("limit", *limit),
+		attribute.String("id", obj.ID))
 	query := "SELECT id,name,parent_tag_id,value,discriminator FROM tag WHERE parent_tag_id = ?"
-	span.SetAttributes(
-		attribute.String("db.query.text", query),
-		attribute.String("db.parameter.id", obj.ID))
 	result, err := r.dB.QueryContext(ctx, query, obj.ID)
 	if err != nil {
 		return nil, err
@@ -827,14 +712,8 @@ func (r *staticTagResolver) ChildTags(ctx context.Context, obj *model.StaticTag,
 func (r *staticTagCategoryResolver) ParentTagCategory(ctx context.Context, obj *model.StaticTagCategory) (model.TagCategory, error) {
 	slog.InfoContext(ctx, "ParentTagCategory(byStaticTagCategory)", "id", obj.ID)
 	span := trace.SpanFromContext(ctx)
-	span.SetAttributes(
-		attribute.String("db.system", "mysql"),
-		attribute.String("db.operation.name", "select"))
 	span.SetAttributes(attribute.String("id", obj.ID))
 	query := "SELECT p.id,p.name,p.parent,p.discriminator, p.format, p.open FROM tagcategory p, tagcategory this WHERE this.parent = p.id and this.id = ?"
-	span.SetAttributes(
-		attribute.String("db.query.text", query),
-		attribute.String("db.parameter.id", obj.ID))
 	result, err := r.dB.QueryContext(ctx, query, obj.ID)
 	if err != nil {
 		return nil, err
@@ -858,15 +737,10 @@ func (r *staticTagCategoryResolver) RootTags(ctx context.Context, obj *model.Sta
 	slog.InfoContext(ctx, "RootTags(byStaticTageCategory)", "id", obj.ID, "skip", skip, "limit", limit)
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(
-		attribute.String("db.system", "mysql"),
-		attribute.String("db.operation.name", "select"),
 		attribute.Int("skip", *skip),
-		attribute.Int("limit", *limit))
-	span.SetAttributes(attribute.String("id", obj.ID))
+		attribute.Int("limit", *limit),
+		attribute.String("id", obj.ID))
 	query := "SELECT id,name,parent_tag_id,value,discriminator FROM tag WHERE parent_tag_id is null and tagcategory_id = ? limit ?,?"
-	span.SetAttributes(
-		attribute.String("db.query.text", query),
-		attribute.String("db.parameter.id", obj.ID))
 	result, err := r.dB.QueryContext(ctx, query, obj.ID, skip, limit)
 	if err != nil {
 		return nil, nil
@@ -895,15 +769,10 @@ func (r *userResolver) Groups(ctx context.Context, obj *model.User, skip *int, l
 	slog.InfoContext(ctx, "Groups(forUser)", "id", obj.ID, "skip", skip, "limit", limit)
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(
-		attribute.String("db.system", "mysql"),
-		attribute.String("db.operation.name", "select"),
 		attribute.Int("skip", *skip),
-		attribute.Int("limit", *limit))
-	span.SetAttributes(attribute.String("id", obj.ID))
+		attribute.Int("limit", *limit),
+		attribute.String("id", obj.ID))
 	query := "SELECT `group`.id,`group`.name FROM `group`,user_group where user_group.group_id = `group`.id and user_group.user_id = ? limit ?,?"
-	span.SetAttributes(
-		attribute.String("db.query.text", query),
-		attribute.String("db.parameter.id", obj.ID))
 	result, err := r.dB.QueryContext(ctx, query, obj.ID, skip, limit)
 	if err != nil {
 		return nil, err
@@ -927,15 +796,10 @@ func (r *userResolver) Accesses(ctx context.Context, obj *model.User, skip *int,
 	slog.InfoContext(ctx, "Accesses(forUser)", "id", obj.ID, "skip", skip, "limit", limit)
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(
-		attribute.String("db.system", "mysql"),
-		attribute.String("db.operation.name", "select"),
 		attribute.Int("skip", *skip),
-		attribute.Int("limit", *limit))
-	span.SetAttributes(attribute.String("id", obj.ID))
+		attribute.Int("limit", *limit),
+		attribute.String("id", obj.ID))
 	query := "SELECT id,permission FROM access WHERE discriminator='user' AND access.identity_id = ? limit ?,?"
-	span.SetAttributes(
-		attribute.String("db.query.text", query),
-		attribute.String("db.parameter.id", obj.ID))
 	result, err := r.dB.QueryContext(ctx, query, obj.ID, skip, limit)
 	if err != nil {
 		return nil, err

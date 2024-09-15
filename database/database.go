@@ -9,6 +9,8 @@ import (
 	"log/slog"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/uptrace/opentelemetry-go-extra/otelsql"
+	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
 )
 
 //go:embed schema/*.sql
@@ -71,7 +73,9 @@ func NewConnection(ctx context.Context, opts ...Opts) (db *sql.DB, err error) {
 
 	slog.Debug("Connecting to database", "host", c.host, "port", c.port, "username", c.username, "database", c.database)
 	connectionString := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", c.username, c.password, c.host, c.port, c.database)
-	db, err = sql.Open("mysql", connectionString)
+	db, err = otelsql.Open("mysql", connectionString,
+		otelsql.WithDBName(c.database),
+		otelsql.WithAttributes(semconv.DBSystemMySQL))
 	if err != nil {
 		slog.Warn("Failed to connect to database", "error", err)
 		return nil, err
@@ -87,7 +91,7 @@ func NewConnection(ctx context.Context, opts ...Opts) (db *sql.DB, err error) {
 	return db, nil
 }
 
-func CleanSchema(db *sql.DB) error {
+func CleanSchema(ctx context.Context, db *sql.DB) error {
 	slog.Info("Cleaning schema")
 	goose.SetBaseFS(embedMigrations)
 
@@ -96,8 +100,7 @@ func CleanSchema(db *sql.DB) error {
 		return err
 	}
 
-	ctx := context.Background()
-	err = goose.DownToContext(ctx, db, "schema", 0)
+	err = goose.DownContext(ctx, db, "schema")
 	if err != nil {
 		return err
 	}
@@ -105,7 +108,7 @@ func CleanSchema(db *sql.DB) error {
 	return nil
 }
 
-func MigrateSchema(db *sql.DB) error {
+func MigrateSchema(ctx context.Context, db *sql.DB) error {
 	slog.Info("Migrating schema")
 	goose.SetBaseFS(embedMigrations)
 
@@ -114,7 +117,6 @@ func MigrateSchema(db *sql.DB) error {
 		return err
 	}
 
-	ctx := context.Background()
 	err = goose.UpContext(ctx, db, "schema")
 	if err != nil {
 		return err

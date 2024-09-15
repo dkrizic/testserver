@@ -10,6 +10,7 @@ import (
 	log2 "github.com/dkrizic/testserver/service/handler/log"
 	"github.com/dkrizic/testserver/service/handler/token"
 	"github.com/dkrizic/testserver/service/version"
+	"github.com/dkrizic/testserver/telemetry"
 	"github.com/ravilushqa/otelgqlgen"
 	"go.opentelemetry.io/otel/trace"
 	"log/slog"
@@ -105,6 +106,7 @@ func (s *Service) Run() error {
 	slog.Info("Starting server")
 
 	ctx := context.Background()
+	ctx, span := telemetry.Tracer().Start(ctx, "service.Start")
 
 	db, err := database.NewConnection(
 		ctx,
@@ -119,18 +121,20 @@ func (s *Service) Run() error {
 	}
 
 	if s.CleanDatabase {
-		err = database.CleanSchema(db)
+		err = database.CleanSchema(ctx, db)
 		if err != nil {
 			slog.Error("Failed to clean schema", "error", err)
 			return err
 		}
+		span.AddEvent("Database cleaned")
 	}
 
-	err = database.MigrateSchema(db)
+	err = database.MigrateSchema(ctx, db)
 	if err != nil {
 		slog.Error("Failed to migrate schema", "error", err)
 		return err
 	}
+	span.AddEvent("Database migrated")
 
 	mux := http.NewServeMux()
 
@@ -197,6 +201,9 @@ func (s *Service) Run() error {
 			return
 		}
 	}()
+
+	span.AddEvent("Server started")
+	span.End()
 
 	<-c
 	slog.Info("Shutting down server")
