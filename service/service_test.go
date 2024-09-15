@@ -21,7 +21,7 @@ func TestGraphQl(t *testing.T) {
 
 	ctx := context.Background()
 
-	db, err := database.NewConnection(
+	db, err := database.NewConnection(ctx,
 		database.Host(config.Service().DatabaseHost()),
 		database.Port("3306"),
 		database.Username("testserver"),

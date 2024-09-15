@@ -107,6 +107,7 @@ func (s *Service) Run() error {
 	ctx := context.Background()
 
 	db, err := database.NewConnection(
+		ctx,
 		// database.Host("localhost"),
 		// database.Port("3306"),
 		database.Username("testserver"),

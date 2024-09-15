@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"database/sql"
 	"embed"
 	"fmt"
@@ -54,7 +55,7 @@ func Database(database string) Opts {
 	}
 }
 
-func NewConnection(opts ...Opts) (db *sql.DB, err error) {
+func NewConnection(ctx context.Context, opts ...Opts) (db *sql.DB, err error) {
 	c := &config{
 		host:     "localhost",
 		port:     "3306",
@@ -76,7 +77,6 @@ func NewConnection(opts ...Opts) (db *sql.DB, err error) {
 		return nil, err
 	}
 
-	ctx := context.Background()
 	err = db.PingContext(ctx)
 	if err != nil {
 		slog.Warn("Failed to ping database", "error", err)
